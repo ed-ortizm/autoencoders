@@ -23,15 +23,17 @@ tf.compat.v1.disable_eager_execution()
 class VAE:
     def __init__(
         self,
-        input_dimensions: "int",
-        encoder_units: "list",
-        latent_dimensions: "int",
-        decoder_units: "list",
-        batch_size: "int",
-        epochs: "int",
-        learning_rate: "float",
-        reconstruction_loss_weight: "float",
-        output_activation: "str" = "linear",
+        architecture: "dict",
+        hyperparameters: "dict",
+        # input_dimensions: "int",
+        # encoder_units: "list",
+        # latent_dimensions: "int",
+        # decoder_units: "list",
+        # batch_size: "int",
+        # epochs: "int",
+        # learning_rate: "float",
+        # reconstruction_loss_weight: "float",
+        # output_activation: "str" = "linear",
     ) -> "tf.keras.model":
 
         """
@@ -60,19 +62,21 @@ class VAE:
             reconstruction loss
         """
 
-        self.input_dimensions = input_dimensions
+        [
+            self.input_dimensions,
+            self.encoder_units,
+            self.latent_dimensions,
+            self.decoder_units,
+            self.architecture_str
+        ] = self._get_architecture(architecture)
 
-        self.encoder_units = encoder_units
-        self.latent_dimensions = latent_dimensions
-        self.decoder_units = decoder_units
-
-        self.batch_size = batch_size
-        self.epochs = epochs
-        self.learning_rate = learning_rate
-
-        self.out_activation = output_activation
-
-        self.reconstruction_weight = reconstruction_loss_weight
+        [
+            self.batch_size,
+            self.epochs,
+            self.learning_rate,
+            self.out_activation,
+            self.reconstruction_weight,
+        ] = self._get_hyperparameters(hyperparameters)
 
         self.encoder = None
         self.decoder = None
@@ -120,7 +124,47 @@ class VAE:
             shuffle=True
         )
 
-    ############################################################################
+    ###########################################################################
+    def _get_hyperparameters(self, hyperparameters: "dict"):
+
+        batch_size = int(hyperparameters["batch_size"])
+        epochs = int(hyperparameters["epochs"])
+        learning_rate = float(hyperparameters["learning_rate"])
+        out_activation = hyperparameters["out_activation"]
+        reconstruction_weight = float(hyperparameters["reconstruction_weight"])
+
+        return [
+            batch_size,
+            epochs,
+            learning_rate,
+            out_activation,
+            reconstruction_weight
+        ]
+    ###########################################################################
+    def _get_architecture(self, architecture: "dict"):
+
+        input_dimensions = int(architecture["input_dimensions"])
+
+        encoder_units = architecture["encoder"]
+        tail = encoder_units
+        encoder_units = [int(units) for units in encoder_units.split("_")]
+
+        latent_dimensions = int(architecture["latent_dimensions"])
+        decoder_units = architecture["decoder"]
+
+        tail = f"{tail}_{latent_dimensions}_{decoder_units}"
+
+        decoder_units = [int(units) for units in decoder_units.split("_")]
+
+
+        return [
+            input_dimensions,
+            encoder_units,
+            latent_dimensions,
+            decoder_units,
+            tail
+        ]
+    ###########################################################################
     def _build(self) -> "":
         """
         Builds and returns a compiled variational auto encoder using
@@ -196,19 +240,6 @@ class VAE:
         input = self._model_input
         output = self.decoder(self.encoder(input))
         self.model = Model(input, output, name="vae")
-
-        # model = Model(input, output, name="vae")
-        # # Retrieve the config
-        # config = model.get_config()
-        # # At loading time, register the custom objects with a `custom_object_scope`:
-        # custom_objects = {
-        #     # "latent_layer": self._latent_layer,
-        #     # "kl_loss": self._kl_loss,
-        #     # "reconstruction_loss": self._reconstruction_loss,
-        #     "custom_loss": self._loss
-        # }
-        # with tf.keras.utils.custom_object_scope(custom_objects):
-        #     self.model = Model.from_config(config)
 
     ############################################################################
     def _build_decoder(self):
