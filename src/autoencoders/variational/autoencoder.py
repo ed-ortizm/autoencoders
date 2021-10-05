@@ -49,47 +49,52 @@ class Encoder(layers.Layer):
             self.latent_dimensions,
         ] = self._get_architecture(architecture)
 
-        self.encoder = None
-        self._build_encoder()
+        self.deterministic = deterministic
 
-        self.sampling = Sampling()
+        self.mu = None
+        self.log_variance = None
+        self.z = None
 
     def call(self, inputs):
 
-        if not deterministic:
+        if not self.deterministic:
 
-            x = self.encoder(inputs)
-            z_mean = self.dense_mean(x)
-            z_log_var = self.dense_log_var(x)
-            z = self.sampling((z_mean, z_log_var))
-            return z_mean, z_log_var, z
+            x = self._encoder_block(inputs)
 
-        z = self.encoder(inputs)
+            mu, log_variance = self._get_mu_log_variance(x)
+
+            self.sampling = Sampling()
+
+            z = self.sampling((mu, log_variance))
+            self.z = z
+
+            return mu, log_variance, z
+
+        z = self._encoder_block(inputs)
+        self.z = z
 
         return z
     ############################################################################
-    def _build_encoder(self):
+    def _encoder_block(self, inputs):
 
-        encoder_input = Input(
-            shape=(self.input_dimensions,), name="encoder_input"
-        )
+        return self._add_block(input=inputs, block="encoder")
 
-        self.encoder = self._add_block(input=encoder_input, block="encoder")
+    ###########################################################################
+    def _get_mu_log_variance(self, x: ""):
 
+        self.mu = Dense(self.latent_dimensions, name="mu")(x)
 
-        # self.encoder = Model(encoder_input, encoder_block, name="encoder")
+        self.log_variance = Dense(self.latent_dimensions,
+            name="log_variance")(x)
 
-    ############################################################################
+        return self.mu, self.log_variance
+    ###########################################################################
     def _add_block(self, input: "keras.Input", block: "str"):
 
         x = input
 
-        if block == "encoder":
-            input_dimensions = self.input_dimensions
-            block_units = self.encoder_units
-        else:
-            input_dimensions = self.latent_dimensions
-            block_units = self.decoder_units
+        input_dimensions = self.input_dimensions
+        block_units = self.encoder_units
 
         standard_deviation = np.sqrt(2.0 / input_dimensions)
 
@@ -148,6 +153,54 @@ class Encoder(layers.Layer):
             encoder_units,
             latent_dimensions
         ]
+    ###########################################################################
+class Decoder(layers.Layer):
+    """Converts z, the encoded digit vector, back into a readable digit."""
+
+    def __init__(self,
+        architecture: "dict",
+        name: "str"="decoder",
+        deterministic: "bool"=False,
+        **kwargs
+        ):
+
+        super(Decoder, self).__init__(name=name, **kwargs)
+
+        [
+            self.input_dimensions,
+            self.decoder_units
+        ] = self._get_architecture(architecture)
+
+        self.deterministic = deterministic
+    ###########################################################################
+    def call(self, inputs):
+        x = self.dense_proj(inputs)
+        return self.dense_output(x)
+
+    ###########################################################################
+    def _get_architecture(self, architecture: "dict"):
+
+        input_dimensions = int(architecture["input_dimensions"])
+
+        decoder_units = architecture["decoder"]
+        decoder_units = [int(units) for units in decoder_units.split("_")]
+
+        return [
+            input_dimensions,
+            decoder_units
+        ]
+
+    ###########################################################################
+    ###########################################################################
+    def _get_units(self, architecture):
+
+        decoder_units = architecture["decoder"]
+        decoder_units = [int(units) for units in decoder_units.split("_")]
+
+        return decoder_units
+    ###########################################################################
+
+    ###########################################################################
     ###########################################################################
 ###############################################################################
 class VAE:
