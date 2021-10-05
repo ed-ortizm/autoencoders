@@ -9,6 +9,7 @@ import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from tensorflow.keras import backend as K
+from tensorflow.keras import layers
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
 from tensorflow.keras.layers import Activation, BatchNormalization, LeakyReLU
@@ -20,20 +21,140 @@ from tensorflow.keras.utils import plot_model
 tf.compat.v1.disable_eager_execution()
 # this is necessary because I use custom loss function
 ###############################################################################
+class Sampling(layers.Layer):
+    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
+
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+        batch = tf.shape(z_mean)[0]
+        dim = tf.shape(z_mean)[1]
+        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
+        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+###############################################################################
+class Encoder(layers.Layer):
+    """Maps spectra to a triplet (z_mean, z_log_var, z)."""
+
+    def __init__(self,
+        architecture: "dict",
+        name: "str"="encoder",
+        deterministic: "bool"=False,
+        **kwargs
+        ):
+
+        super(Encoder, self).__init__(name=name, **kwargs)
+
+        [
+            self.input_dimensions,
+            self.encoder_units,
+            self.latent_dimensions,
+        ] = self._get_architecture(architecture)
+
+        self.encoder = None
+        self._build_encoder()
+
+        self.sampling = Sampling()
+
+    def call(self, inputs):
+
+        if not deterministic:
+
+            x = self.encoder(inputs)
+            z_mean = self.dense_mean(x)
+            z_log_var = self.dense_log_var(x)
+            z = self.sampling((z_mean, z_log_var))
+            return z_mean, z_log_var, z
+
+        z = self.encoder(inputs)
+
+        return z
+    ############################################################################
+    def _build_encoder(self):
+
+        encoder_input = Input(
+            shape=(self.input_dimensions,), name="encoder_input"
+        )
+
+        self.encoder = self._add_block(input=encoder_input, block="encoder")
+
+
+        # self.encoder = Model(encoder_input, encoder_block, name="encoder")
+
+    ############################################################################
+    def _add_block(self, input: "keras.Input", block: "str"):
+
+        x = input
+
+        if block == "encoder":
+            input_dimensions = self.input_dimensions
+            block_units = self.encoder_units
+        else:
+            input_dimensions = self.latent_dimensions
+            block_units = self.decoder_units
+
+        standard_deviation = np.sqrt(2.0 / input_dimensions)
+
+        for layer_index, number_units in enumerate(block_units):
+
+            x, standard_deviation = self._add_layer(
+                x, layer_index, number_units, standard_deviation, block
+            )
+
+        return x
+
+    ############################################################################
+    def _add_layer(
+        self,
+        x: "keras.Dense",
+        layer_index: "int",
+        number_units: "int",
+        standard_deviation: "float",
+        block: "str",
+    ):
+
+        initial_weights = tf.keras.initializers.RandomNormal(
+            mean=0.0, stddev=standard_deviation
+        )
+
+        layer = Dense(
+            number_units,
+            kernel_initializer=initial_weights,
+            name=f"{block}_layer_{layer_index + 1}",
+        )
+
+        x = layer(x)
+
+        x = LeakyReLU(name=f"LeakyReLU_{block}_{layer_index + 1}")(x)
+
+        x = BatchNormalization(
+            name=f"batch_normaliztion_{block}_{layer_index + 1}"
+        )(x)
+
+        standard_deviation = np.sqrt(2.0 / number_units)
+
+        return x, standard_deviation
+
+    ###########################################################################
+    def _get_architecture(self, architecture: "dict"):
+
+        input_dimensions = int(architecture["input_dimensions"])
+
+        encoder_units = architecture["encoder"]
+        encoder_units = [int(units) for units in encoder_units.split("_")]
+
+        latent_dimensions = int(architecture["latent_dimensions"])
+
+        return [
+            input_dimensions,
+            encoder_units,
+            latent_dimensions
+        ]
+    ###########################################################################
+###############################################################################
 class VAE:
     def __init__(
         self,
         architecture: "dict",
         hyperparameters: "dict",
-        # input_dimensions: "int",
-        # encoder_units: "list",
-        # latent_dimensions: "int",
-        # decoder_units: "list",
-        # batch_size: "int",
-        # epochs: "int",
-        # learning_rate: "float",
-        # reconstruction_loss_weight: "float",
-        # output_activation: "str" = "linear",
     ) -> "tf.keras.model":
 
         """
