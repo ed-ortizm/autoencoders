@@ -206,8 +206,10 @@ class Decoder(layers.Layer):
 class VAE:
     def __init__(
         self,
-        architecture: "dict",
-        hyperparameters: "dict",
+        architecture: "dict"={None},
+        hyperparameters: "dict"={None},
+        reload: "bool"=False,
+        parameters: "list"=[None],
     ) -> "tf.keras.model":
 
         """
@@ -236,21 +238,42 @@ class VAE:
             reconstruction loss
         """
 
-        [
-            self.input_dimensions,
-            self.encoder_units,
-            self.latent_dimensions,
-            self.decoder_units,
-            self.architecture_str
-        ] = self._get_architecture(architecture)
+        #######################################################################
+        if reload:
 
-        [
-            self.batch_size,
-            self.epochs,
-            self.learning_rate,
-            self.out_activation,
-            self.reconstruction_weight,
-        ] = self._get_hyperparameters(hyperparameters)
+            [
+                self.input_dimensions,
+                self.encoder_units,
+                self.latent_dimensions,
+                self.decoder_units,
+                self.batch_size,
+                self.epochs,
+                self.learning_rate,
+                self.reconstruction_weight,
+                self.out_activation
+            ] = parameters
+
+            encoder = ' '.join(map(str, self.encoder_units)).replace(' ', '_')
+            decoder = ' '.join(map(str, self.decoder_units)).replace(' ', '_')
+            self.architecture_str = f"{encoder}_{self.latent_dimensions}_{decoder}"
+        #######################################################################
+
+        else:
+            [
+                self.input_dimensions,
+                self.encoder_units,
+                self.latent_dimensions,
+                self.decoder_units,
+                self.architecture_str
+            ] = self._get_architecture(architecture)
+
+            [
+                self.batch_size,
+                self.epochs,
+                self.learning_rate,
+                self.out_activation,
+                self.reconstruction_weight,
+            ] = self._get_hyperparameters(hyperparameters)
 
         self.encoder = None
         self.decoder = None
@@ -258,7 +281,7 @@ class VAE:
 
         self._build()
 
-    ############################################################################
+    ###########################################################################
     def reconstruct(self, spectra: "2D np.array") -> "2D np.array":
 
         if spectra.ndim == 1:
@@ -552,9 +575,6 @@ class VAE:
     ############################################################################
     def save_model(self, directory: "str"):
 
-        # tf.keras.models.save_model(self.model, f"{directory}/vae")
-        # tf.keras.models.save_model(self.encoder, f"{directory}/encoder")
-        # tf.keras.models.save_model(self.decoder, f"{directory}/decoder")
         self._save_parameters(directory)
         self._save_weights(directory)
 
@@ -580,9 +600,10 @@ class VAE:
         save_location = f"{save_directory}/weights.h5"
         self.model.save_weights(save_location)
 
-    def load_weights(self, weights_path):
+    def _load_weights(self, weights_path):
         self.model.load_weights(weights_path)
 
+    ###########################################################################
     @classmethod
     def load(cls, save_directory):
         parameters_location = f"{save_directory}/parameters.pkl"
@@ -591,20 +612,15 @@ class VAE:
             parameters = pickle.load(file)
 
         print(parameters)
-        autoencoder = VAE(*parameters)
+        autoencoder = VAE(reload=True, parameters = parameters)
         weights_location = f"{save_directory}/weights.h5"
-        autoencoder.load_weights(weights_location)
+        autoencoder._load_weights(weights_location)
         return autoencoder
-#     def plot_model(self):
-#
-#         plot_model(self.vae, to_file='DenseVAE.png', show_shapes='True')
-#         plot_model(self.encoder, to_file='DenseEncoder.png', show_shapes='True')
-#         plot_model(self.decoder, to_file='DenseDecoder.png', show_shapes='True')
-
+###############################################################################
 class LoadAE:
     """Load AE model"""
 
-    ############################################################################
+    ###########################################################################
     def __init__(self, model:'str', location:'str'):
 
         # self.model = load_model(f'{location}/{model}')
