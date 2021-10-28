@@ -204,38 +204,40 @@ class Decoder(layers.Layer):
     ###########################################################################
 ###############################################################################
 class VAE:
+    """Create a variational autoencoder"""
     def __init__(
         self,
         architecture: "dict"={None},
         hyperparameters: "dict"={None},
         reload: "bool"=False,
         parameters: "list"=[None],
-    ) -> "tf.keras.model":
+    ) -> "VAE object":
 
         """
         PARAMETERS
 
-        input_dimensions:
+            architecture: {
+                "encoder" : 500_50, # encoder units per layer
+                "latent_dimensions" : 10,
+                "decoder" : 50_500, # decoder units per layer
+                "input_dimensions" : number of spectra #(set in train)
+            }
 
-        encoder_units: python list containing the number of units
-            in each layer of the encoder
+            hyperparameters: {
+                learning_rate : 1e-4,
+                batch_size : 1024,
+                epochs : 5,
+                out_activation : linear,
+                reconstruction_weight : 1000
+            }
 
-        latent_dimensions: number of  dimensions for the latent
-            representation
+            reload: if True, sets model to be loaded with class method
+                load
+                # not implemented yet
 
-        decoder_units: python list containing the number of units
-            in each layer of the decoder
-
-        batch_size: number of batches for the training set
-
-        epochs: maximum number of epochs to train the algorithm
-
-        learning_rate: value for the learning rate
-
-        output_activation:
-
-        reconstruction_loss_weight: weighting factor for the
-            reconstruction loss
+            parameters: parameters to get the model if load is True
+                # using it now as a shorcut to class method
+                # reload implementation
         """
 
         #######################################################################
@@ -255,7 +257,9 @@ class VAE:
 
             encoder = ' '.join(map(str, self.encoder_units)).replace(' ', '_')
             decoder = ' '.join(map(str, self.decoder_units)).replace(' ', '_')
-            self.architecture_str = f"{encoder}_{self.latent_dimensions}_{decoder}"
+            self.architecture_str = (
+                f"{encoder}_{self.latent_dimensions}_{decoder}"
+            )
         #######################################################################
 
         else:
@@ -283,14 +287,38 @@ class VAE:
 
     ###########################################################################
     def reconstruct(self, spectra: "2D np.array") -> "2D np.array":
+        """
+        Once the VAE is trained, this method is used to obtain
+        the spectra learned by the model
+
+        PARAMETERS
+            spectra: contains fluxes of observed spectra
+
+        OUTPUTS
+            predicted_spectra: contains generated spectra by the model
+                from observed spectra (input)
+        """
 
         if spectra.ndim == 1:
             spectra = spectra.reshape(1, -1)
 
-        return self.model.predict(spectra)
+        predicted_spectra = self.model.predict(spectra)
 
-    ############################################################################
+        return predicted_spectra
+
+    ###########################################################################
     def encode(self, spectra: "2D np.array") -> "2D np.array":
+        """
+        Given an array of observed fluxes, this method outputs the
+        latent representation learned by the VAE onece it is trained
+
+        PARAMETERS
+            spectra: contains fluxes of observed spectra
+
+        OUTPUTS
+            z: contains latent representation of the observed fluxes
+
+        """
 
         if spectra.ndim == 1:
             spectra = spectra.reshape(1, -1)
@@ -299,8 +327,21 @@ class VAE:
 
         return z
 
-    ############################################################################
+    ###########################################################################
     def decode(self, z: "2D np.array") -> "2D np.aray":
+        """
+
+        Given a set of points in latent space, this method outputs
+        spectra according to the representation learned by the VAE
+        onece it is trained
+
+        PARAMETERS
+            z: contains a set of latent representation
+
+        OUTPUTS
+            spectra: contains fluxes of spectra built by the model
+
+        """
 
         if z.ndim == 1:
             coding = z.reshape(1, -1)
@@ -309,7 +350,7 @@ class VAE:
 
         return spectra
 
-    ############################################################################
+    ###########################################################################
     def train(self, spectra):
         print(spectra.shape)
         self.model.fit(
@@ -373,7 +414,7 @@ class VAE:
         self._build_vae()
         self._compile()
 
-    ############################################################################
+    ###########################################################################
     def _compile(self):
 
         optimizer = Adam(learning_rate=self.learning_rate)
@@ -385,7 +426,7 @@ class VAE:
             # metrics=["mse" , self._kl_loss]
         )
 
-    ############################################################################
+    ###########################################################################
     def _loss(self, y_target, y_predicted):
         """
         Standard loss function for the variational auto encoder
@@ -410,7 +451,7 @@ class VAE:
 
         return loss
 
-    ############################################################################
+    ###########################################################################
     def _reconstruction_loss(self, y_target, y_predicted):
 
         error = y_target - y_predicted
@@ -418,7 +459,7 @@ class VAE:
 
         return reconstruction_loss
 
-    ############################################################################
+    ###########################################################################
     def _kl_loss(self, y_target, y_predicted):
 
         kl_loss = -0.5 * K.sum(
@@ -431,14 +472,14 @@ class VAE:
 
         return kl_loss
 
-    ############################################################################
+    ###########################################################################
     def _build_vae(self):
 
         input = self._model_input
         output = self.decoder(self.encoder(input))
         self.model = Model(input, output, name="vae")
 
-    ############################################################################
+    ###########################################################################
     def _build_decoder(self):
 
         decoder_input = Input(
@@ -450,7 +491,7 @@ class VAE:
         decoder_output = self._output_layer(decoder_block)
 
         self.decoder = Model(decoder_input, decoder_output, name="decoder")
-    ############################################################################
+    ###########################################################################
     def _output_layer(self, decoder_block: "keras.Dense"):
 
         units = self.encoder_units[-1]
@@ -471,7 +512,7 @@ class VAE:
 
         return x
 
-    ############################################################################
+    ###########################################################################
     def _build_encoder(self):
 
         encoder_input = Input(
@@ -485,7 +526,7 @@ class VAE:
         self._model_input = encoder_input
         self.encoder = Model(encoder_input, latent_layer, name="encoder")
 
-    ############################################################################
+    ###########################################################################
     def _add_block(self, input: "keras.Input", block: "str"):
 
         x = input
@@ -507,7 +548,7 @@ class VAE:
 
         return x
 
-    ############################################################################
+    ###########################################################################
     def _add_layer(
         self,
         x: "keras.Dense",
@@ -539,14 +580,14 @@ class VAE:
 
         return x, standard_deviation
 
-    ############################################################################
+    ###########################################################################
     def _latent_layer(self, x: ""):
 
         self.mu = Dense(self.latent_dimensions, name="mu")(x)
 
         self.log_variance = Dense(self.latent_dimensions,
             name="log_variance")(x)
-        ########################################################################
+        #######################################################################
         def sample_normal_distribution(args):
 
             mu, log_variance = args
@@ -558,7 +599,7 @@ class VAE:
 
             return point
 
-        ########################################################################
+        #######################################################################
         x = Lambda(sample_normal_distribution, name="encoder_outputs")(
             [self.mu, self.log_variance]
         )
@@ -566,13 +607,13 @@ class VAE:
         return x
 
 
-    ############################################################################
+    ###########################################################################
     def summary(self):
         self.encoder.summary()
         self.decoder.summary()
         self.model.summary()
 
-    ############################################################################
+    ###########################################################################
     def save_model(self, directory: "str"):
 
         self._save_parameters(directory)
@@ -617,60 +658,3 @@ class VAE:
         autoencoder._load_weights(weights_location)
         return autoencoder
 ###############################################################################
-class LoadAE:
-    """Load AE model"""
-
-    ###########################################################################
-    def __init__(self, model:'str', location:'str'):
-
-        # self.model = load_model(f'{location}/{model}')
-        # self.encoder = load_model(f'{location}/encoder')
-        # self.decoder = load_model(f'{location}/decoder')
-        self.model = load_model(f'{location}/{model}.h5')
-        self.encoder = load_model(f'{location}/encoder.h5')
-        self.decoder = load_model(f'{location}/decoder.h5')
-
-    ###########################################################################
-    def reconstruct(self, spectra: "2D np.array") -> "2D np.array":
-
-        spectra = self._update_dimensions(spectra)
-
-        return self.model.predict(spectra)
-
-    ############################################################################
-    def encode(self, spectra: "2D np.array") -> "2D np.array":
-
-        spectra = self._update_dimensions(spectra)
-        z = self.encoder.predict(spectra)
-        return z
-
-    ############################################################################
-    def decode(self, z: "2D np.array") -> "2D np.aray":
-
-        spectra = self._update_dimensions(spectra)
-        spectra = self.decoder.predict(z)
-        return spectra
-
-    ############################################################################
-    def _update_dimensions(self, x: "np.array"):
-
-        if x.ndim == 1:
-            x = x[np.newaxis, ...]
-
-        return x
-    ############################################################################
-    # def plot_model(self):
-    #
-    #     plot_model(self.ae, to_file="DenseVAE.png", show_shapes="True")
-    #     plot_model(
-    #         self.encoder, to_file="DenseEncoder.png", show_shapes="True"
-    #     )
-    #     plot_model(
-    #         self.decoder, to_file="DenseDecoder.png", show_shapes="True"
-    #     )
-
-    ############################################################################
-    def summary(self):
-        self.encoder.summary()
-        self.decoder.summary()
-        self.model.summary()
