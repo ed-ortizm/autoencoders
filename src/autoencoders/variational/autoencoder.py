@@ -229,6 +229,7 @@ class VAE:
                 epochs : 5,
                 out_activation : linear,
                 reconstruction_weight : 1000
+                klk_weight: 1
             }
 
             reload: if True, sets model to be loaded with class method
@@ -252,6 +253,7 @@ class VAE:
                 self.epochs,
                 self.learning_rate,
                 self.reconstruction_weight,
+                self.kl_weight,
                 self.out_activation
             ] = parameters
 
@@ -277,6 +279,7 @@ class VAE:
                 self.learning_rate,
                 self.out_activation,
                 self.reconstruction_weight,
+                self.kl_weight,
             ] = self._get_hyperparameters(hyperparameters)
 
         self.encoder = None
@@ -370,13 +373,15 @@ class VAE:
         learning_rate = float(hyperparameters["learning_rate"])
         out_activation = hyperparameters["out_activation"]
         reconstruction_weight = float(hyperparameters["reconstruction_weight"])
+        kl_weight = float(hyperparameters["kl_weight"])
 
         return [
             batch_size,
             epochs,
             learning_rate,
             out_activation,
-            reconstruction_weight
+            reconstruction_weight,
+            kl_weight
         ]
     ###########################################################################
     def _get_architecture(self, architecture: "dict"):
@@ -447,7 +452,8 @@ class VAE:
         reconstruction_loss = self._reconstruction_loss(y_target, y_predicted)
         kl_loss = self._kl_loss(y_target, y_predicted)
 
-        loss = self.reconstruction_weight * reconstruction_loss + kl_loss
+        loss = self.reconstruction_weight * reconstruction_loss\
+            + self.kl_weight * kl_loss
 
         return loss
 
