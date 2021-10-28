@@ -18,6 +18,7 @@ parser.read("vae.ini")
 data_directory = parser.get("directories", "train")
 data_name = parser.get("files", "train")
 data = np.load(f"{data_directory}/{data_name}")
+np.random.shuffle(data)
 input_dimensions = data.shape[1]
 ###############################################################################
 architecture = dict(parser.items("architecture"))
