@@ -15,9 +15,13 @@ parser = ConfigParser(interpolation=ExtendedInterpolation())
 parser.read("vae.ini")
 ###############################################################################
 # load data
+print(f"Load data")
 data_directory = parser.get("directories", "train")
 data_name = parser.get("files", "train")
 data = np.load(f"{data_directory}/{data_name}")
+
+# Shuffle for better performance in SGD
+print(f"Shuufle in place train data")
 np.random.shuffle(data)
 input_dimensions = data.shape[1]
 ###############################################################################
@@ -26,6 +30,8 @@ architecture["input_dimensions"] = input_dimensions
 
 hyperparameters = dict(parser.items("hyperparameters"))
 ###############################################################################
+print(f"Build VAE")
+
 vae = VAE(
     architecture,
     hyperparameters,
