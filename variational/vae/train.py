@@ -20,8 +20,12 @@ data_directory = parser.get("directories", "train")
 data_name = parser.get("files", "train")
 data = np.load(f"{data_directory}/{data_name}")
 
+nan_values = np.count_nonzero(np.isnan(data))
+indefinite_values = np.count_nonzero(~np.isfinite(data))
+print(f"Nans and indefinte: {nan_values, indefinite_values}")
+
 # Shuffle for better performance in SGD
-print(f"Shuufle in place train data")
+print(f"Shuffle in place train data")
 np.random.shuffle(data)
 input_dimensions = data.shape[1]
 ###############################################################################
