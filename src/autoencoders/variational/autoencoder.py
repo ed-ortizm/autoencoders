@@ -638,6 +638,7 @@ class VAE:
             self.epochs,
             self.learning_rate,
             self.reconstruction_weight,
+            self.kl_weight,
             self.out_activation,
         ]
 
