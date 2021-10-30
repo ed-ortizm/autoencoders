@@ -361,7 +361,9 @@ class VAE:
             y=spectra,
             batch_size=self.batch_size,
             epochs=self.epochs,
-            verbose=1, # shows progress bar
+            verbose=1, # progress bar
+            #workers=48,
+            use_multiprocessing=True,
             shuffle=True
         )
 
