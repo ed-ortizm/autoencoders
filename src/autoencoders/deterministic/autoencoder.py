@@ -18,7 +18,7 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import plot_model
 
 ###############################################################################
-class VAE:
+class AE:
     """Create a variational autoencoder"""
     def __init__(
         self,
@@ -228,7 +228,7 @@ class VAE:
 
         output_layer = Dense(
             units=self.input_dimensions,
-            activation=self.out_activation
+            activation=self.out_activation,
             name="decoder_output",
         )
 
@@ -265,7 +265,7 @@ class VAE:
 
         for layer_index, number_units in enumerate(block_units):
 
-            x, standard_deviation = self._add_layer(
+            x = self._add_layer(
                 x,
                 layer_index,
                 number_units,
@@ -285,7 +285,7 @@ class VAE:
 
         layer = Dense(
             units=number_units,
-            activation="relu"
+            activation="relu",
             name=f"{block}_{layer_index + 1}",
         )
 

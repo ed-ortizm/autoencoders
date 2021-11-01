@@ -7,12 +7,12 @@ import time
 ###############################################################################
 import numpy as np
 
-from autoencoders.variational.autoencoder import VAE
+from autoencoders.deterministic.autoencoder import AE
 ###############################################################################
 ti = time.time()
 ###############################################################################
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-parser.read("vae.ini")
+parser.read("ae.ini")
 ###############################################################################
 # load data
 print(f"Load data")
@@ -34,24 +34,24 @@ architecture["input_dimensions"] = input_dimensions
 
 hyperparameters = dict(parser.items("hyperparameters"))
 ###############################################################################
-print(f"Build VAE")
+print(f"Build AE")
 
-vae = VAE(
+ae = AE(
     architecture,
     hyperparameters,
 )
 
-vae.summary()
+ae.summary()
 #############################################################################
 # Training the model
-history = vae.train(data)
+history = ae.train(data)
 # save model
 models_directory = parser.get("directories", "models")
 
-if not os.path.exists(f"{models_directory}/{vae.architecture_str}"):
-    os.makedirs(f"{models_directory}/{vae.architecture_str}")
+if not os.path.exists(f"{models_directory}/{ae.architecture_str}"):
+    os.makedirs(f"{models_directory}/{ae.architecture_str}")
 
-vae.save_model(models_directory)
+ae.save_model(models_directory)
 ###############################################################################
 tf = time.time()
 print(f"Running time: {tf-ti:.2f}")
