@@ -12,7 +12,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import layers
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.layers import Activation, BatchNormalization, LeakyReLU
+from tensorflow.keras.layers import Activation
 from tensorflow.keras.layers import Lambda
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import plot_model
@@ -214,7 +214,8 @@ class VAE:
     def _build_decoder(self):
 
         decoder_input = Input(
-            shape=(self.latent_dimensions,), name="decoder_input"
+            shape=(self.latent_dimensions,),
+            name="decoder_input"
         )
 
         decoder_block = self._add_block(input=decoder_input, block="decoder")
@@ -225,15 +226,13 @@ class VAE:
     ###########################################################################
     def _output_layer(self, decoder_block: "keras.Dense"):
 
-        units = self.encoder_units[-1]
-
         output_layer = Dense(
-            self.input_dimensions,
+            units=self.input_dimensions,
+            activation=self.out_activation
             name="decoder_output",
         )
 
         x = output_layer(decoder_block)
-        x = Activation(self.out_activation, name="output_activation")(x)
 
         return x
 
@@ -257,10 +256,11 @@ class VAE:
         x = input
 
         if block == "encoder":
-            input_dimensions = self.input_dimensions
+
             block_units = self.encoder_units
+
         else:
-            input_dimensions = self.latent_dimensions
+
             block_units = self.decoder_units
 
         for layer_index, number_units in enumerate(block_units):
@@ -284,22 +284,32 @@ class VAE:
     ):
 
         layer = Dense(
-            number_units,
+            units=number_units,
+            activation="relu"
             name=f"{block}_{layer_index + 1}",
         )
 
         x = layer(x)
 
-        x = BatchNormalization(
-            name=f"batch_normaliztion_{block}_{layer_index + 1}"
-        )(x)
-
-
         return x
 
     ###########################################################################
-    def _latent_layer(self, x: ""):
-        pass
+    def _latent_layer(self, encoder_block: "keras.Dense"):
+        """
+        PARAMETERS
+            encoder_block
+
+        """
+
+        latent_layer = Dense(
+            units=self.latent_dimensions,
+            activation="linear",
+            name="latent_layer"
+        )
+
+        z = latent_layer(encoder_block)
+
+        return z
 
     ###########################################################################
     def summary(self):
@@ -309,5 +319,7 @@ class VAE:
 
     ###########################################################################
     def save_model(self, directory: "str"):
+        model_name = f"{self.architecture_str}"
+        self.model.save(f"{directory}/{model_name}")
 
 ###############################################################################
