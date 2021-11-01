@@ -12,7 +12,7 @@ from tensorflow.keras import backend as K
 from tensorflow.keras import layers
 from tensorflow.keras import Model
 from tensorflow.keras.layers import Dense, Input
-from tensorflow.keras.layers import Activation, BatchNormalization, LeakyReLU
+from tensorflow.keras.layers import Activation, BatchNormalization
 from tensorflow.keras.layers import Lambda
 from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import plot_model
@@ -20,186 +20,6 @@ from tensorflow.keras.utils import plot_model
 ###############################################################################
 tf.compat.v1.disable_eager_execution()
 # this is necessary because I use custom loss function
-###############################################################################
-class Sampling(layers.Layer):
-    """Uses (z_mean, z_log_var) to sample z, the vector encoding a digit."""
-
-    def call(self, inputs):
-        z_mean, z_log_var = inputs
-        batch = tf.shape(z_mean)[0]
-        dim = tf.shape(z_mean)[1]
-        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
-        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
-###############################################################################
-class Encoder(layers.Layer):
-    """Maps spectra to a triplet (z_mean, z_log_var, z)."""
-
-    def __init__(self,
-        architecture: "dict",
-        name: "str"="encoder",
-        deterministic: "bool"=False,
-        **kwargs
-        ):
-
-        super(Encoder, self).__init__(name=name, **kwargs)
-
-        [
-            self.input_dimensions,
-            self.encoder_units,
-            self.latent_dimensions,
-        ] = self._get_architecture(architecture)
-
-        self.deterministic = deterministic
-
-        self.mu = None
-        self.log_variance = None
-        self.z = None
-
-    def call(self, inputs):
-
-        if not self.deterministic:
-
-            x = self._encoder_block(inputs)
-
-            mu, log_variance = self._get_mu_log_variance(x)
-
-            self.sampling = Sampling()
-
-            z = self.sampling((mu, log_variance))
-            self.z = z
-
-            return mu, log_variance, z
-
-        z = self._encoder_block(inputs)
-        self.z = z
-
-        return z
-    ############################################################################
-    def _encoder_block(self, inputs):
-
-        return self._add_block(input=inputs, block="encoder")
-
-    ###########################################################################
-    def _get_mu_log_variance(self, x: ""):
-
-        self.mu = Dense(self.latent_dimensions, name="mu")(x)
-
-        self.log_variance = Dense(self.latent_dimensions,
-            name="log_variance")(x)
-
-        return self.mu, self.log_variance
-    ###########################################################################
-    def _add_block(self, input: "keras.Input", block: "str"):
-
-        x = input
-
-        input_dimensions = self.input_dimensions
-        block_units = self.encoder_units
-
-        standard_deviation = np.sqrt(2.0 / input_dimensions)
-
-        for layer_index, number_units in enumerate(block_units):
-
-            x, standard_deviation = self._add_layer(
-                x, layer_index, number_units, standard_deviation, block
-            )
-
-        return x
-
-    ############################################################################
-    def _add_layer(
-        self,
-        x: "keras.Dense",
-        layer_index: "int",
-        number_units: "int",
-        standard_deviation: "float",
-        block: "str",
-    ):
-
-        initial_weights = tf.keras.initializers.RandomNormal(
-            mean=0.0, stddev=standard_deviation
-        )
-
-        layer = Dense(
-            number_units,
-            kernel_initializer=initial_weights,
-            name=f"{block}_layer_{layer_index + 1}",
-        )
-
-        x = layer(x)
-
-        x = BatchNormalization(
-            name=f"batch_normaliztion_{block}_{layer_index + 1}"
-        )(x)
-
-        standard_deviation = np.sqrt(2.0 / number_units)
-
-        return x, standard_deviation
-
-    ###########################################################################
-    def _get_architecture(self, architecture: "dict"):
-
-        input_dimensions = int(architecture["input_dimensions"])
-
-        encoder_units = architecture["encoder"]
-        encoder_units = [int(units) for units in encoder_units.split("_")]
-
-        latent_dimensions = int(architecture["latent_dimensions"])
-
-        return [
-            input_dimensions,
-            encoder_units,
-            latent_dimensions
-        ]
-    ###########################################################################
-class Decoder(layers.Layer):
-    """Converts z, the encoded digit vector, back into a readable digit."""
-
-    def __init__(self,
-        architecture: "dict",
-        name: "str"="decoder",
-        deterministic: "bool"=False,
-        **kwargs
-        ):
-
-        super(Decoder, self).__init__(name=name, **kwargs)
-
-        [
-            self.input_dimensions,
-            self.decoder_units
-        ] = self._get_architecture(architecture)
-
-        self.deterministic = deterministic
-    ###########################################################################
-    def call(self, inputs):
-        x = self.dense_proj(inputs)
-        return self.dense_output(x)
-
-    ###########################################################################
-    def _get_architecture(self, architecture: "dict"):
-
-        input_dimensions = int(architecture["input_dimensions"])
-
-        decoder_units = architecture["decoder"]
-        decoder_units = [int(units) for units in decoder_units.split("_")]
-
-        return [
-            input_dimensions,
-            decoder_units
-        ]
-
-    ###########################################################################
-    ###########################################################################
-    def _get_units(self, architecture):
-
-        decoder_units = architecture["decoder"]
-        decoder_units = [int(units) for units in decoder_units.split("_")]
-
-        return decoder_units
-    ###########################################################################
-
-    ###########################################################################
-    ###########################################################################
 ###############################################################################
 class VAE:
     """Create a variational autoencoder"""
@@ -500,21 +320,13 @@ class VAE:
     ###########################################################################
     def _output_layer(self, decoder_block: "keras.Dense"):
 
-        units = self.encoder_units[-1]
-        standard_deviation = np.sqrt(2.0 / units)
-
-        initial_weights = tf.keras.initializers.RandomNormal(
-            mean=0.0, stddev=standard_deviation
-        )
-
         output_layer = Dense(
-            self.input_dimensions,
-            kernel_initializer=initial_weights,
-            name="decoder_output_layer",
+            units=self.input_dimensions,
+            activation=self.out_activation,
+            name="decoder_output",
         )
 
         x = output_layer(decoder_block)
-        x = Activation(self.out_activation, name="output_activation")(x)
 
         return x
 
@@ -569,17 +381,16 @@ class VAE:
         )
 
         layer = Dense(
-            number_units,
+            units=number_units,
+            activation="relu",
             kernel_initializer=initial_weights,
-            name=f"{block}_layer_{layer_index + 1}",
+            name=f"{block}_{layer_index + 1}",
         )
 
         x = layer(x)
 
-        x = LeakyReLU(name=f"LeakyReLU_{block}_{layer_index + 1}")(x)
-
         x = BatchNormalization(
-            name=f"batch_normaliztion_{block}_{layer_index + 1}"
+            name=f"BN_{block}_{layer_index + 1}"
         )(x)
 
         standard_deviation = np.sqrt(2.0 / number_units)
@@ -589,10 +400,15 @@ class VAE:
     ###########################################################################
     def _latent_layer(self, x: ""):
 
-        self.mu = Dense(self.latent_dimensions, name="mu")(x)
+        self.mu = Dense(
+            units=self.latent_dimensions,
+            name="mu"
+        )(x)
 
-        self.log_variance = Dense(self.latent_dimensions,
-            name="log_variance")(x)
+        self.log_variance = Dense(
+            units=self.latent_dimensions,
+            name="log_variance"
+            )(x)
         #######################################################################
         def sample_normal_distribution(args):
 
