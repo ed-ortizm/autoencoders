@@ -128,8 +128,6 @@ class Encoder(layers.Layer):
 
         x = layer(x)
 
-        x = LeakyReLU(name=f"LeakyReLU_{block}_{layer_index + 1}")(x)
-
         x = BatchNormalization(
             name=f"batch_normaliztion_{block}_{layer_index + 1}"
         )(x)
