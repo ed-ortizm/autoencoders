@@ -24,6 +24,7 @@ class AE:
         self,
         architecture: "dict"={None},
         hyperparameters: "dict"={None},
+        reload=False
     ) -> "AE object":
 
         """
@@ -46,27 +47,44 @@ class AE:
         """
 
 
-        [
-            self.input_dimensions,
-            self.encoder_units,
-            self.latent_dimensions,
-            self.decoder_units,
-            self.architecture_str
-        ] = self._get_architecture(architecture)
+        if not reload:
 
-        [
-            self.batch_size,
-            self.epochs,
-            self.learning_rate,
-            self.out_activation,
-        ] = self._get_hyperparameters(hyperparameters)
+            [
+                self.input_dimensions,
+                self.encoder_units,
+                self.latent_dimensions,
+                self.decoder_units,
+                self.architecture_str
+            ] = self._get_architecture(architecture)
+
+            [
+                self.batch_size,
+                self.epochs,
+                self.learning_rate,
+                self.out_activation,
+            ] = self._get_hyperparameters(hyperparameters)
+
+
+            self._build()
 
         self.encoder = None
         self.decoder = None
         self.model = None
+    ###########################################################################
+    @classmethod
+    def load(cls, save_directory):
 
-        self._build()
+        ae = AE(reload=True)
+        encoder_directory = f"{save_directory}/encoder"
+        ae.encoder = load_model(encoder_directory)
 
+        decoder_directory = f"{save_directory}/decoder"
+        ae.decoder = load_model(decoder_directory)
+
+        model_directory = f"{save_directory}/ae"
+        ae.model = load_model(model_directory)
+
+        return ae
     ###########################################################################
     def reconstruct(self, spectra: "2D np.array") -> "2D np.array":
         """
@@ -319,7 +337,11 @@ class AE:
 
     ###########################################################################
     def save_model(self, directory: "str"):
-        model_name = f"{self.architecture_str}"
-        self.model.save(f"{directory}/{model_name}")
+
+        directory = f"{directory}/{self.architecture_str}"
+
+        self.model.save(f"{directory}/ae")
+        self.encoder.save(f"{directory}/encoder")
+        self.decoder.save(f"{directory}/decoder")
 
 ###############################################################################
