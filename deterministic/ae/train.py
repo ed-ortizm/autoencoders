@@ -39,6 +39,7 @@ print(f"Build AE")
 ae = AE(
     architecture,
     hyperparameters,
+    reload=False
 )
 
 ae.summary()

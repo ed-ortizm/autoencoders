@@ -46,6 +46,10 @@ class AE:
 
         """
 
+        self.encoder = None
+        self.decoder = None
+        self.model = None
+
 
         if not reload:
 
@@ -67,9 +71,6 @@ class AE:
 
             self._build()
 
-        self.encoder = None
-        self.decoder = None
-        self.model = None
     ###########################################################################
     @classmethod
     def load(cls, save_directory):
