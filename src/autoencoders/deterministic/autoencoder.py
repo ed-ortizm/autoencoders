@@ -1,5 +1,6 @@
 import os
 import pickle
+
 ###############################################################################
 import matplotlib
 import matplotlib.pyplot as plt
@@ -20,11 +21,12 @@ from tensorflow.keras.utils import plot_model
 ###############################################################################
 class AE:
     """Create a variational autoencoder"""
+
     def __init__(
         self,
-        architecture: "dict"={None},
-        hyperparameters: "dict"={None},
-        reload=False
+        architecture: "dict" = {None},
+        hyperparameters: "dict" = {None},
+        reload=False,
     ) -> "AE object":
 
         """
@@ -50,7 +52,6 @@ class AE:
         self.decoder = None
         self.model = None
 
-
         if not reload:
 
             [
@@ -58,7 +59,7 @@ class AE:
                 self.encoder_units,
                 self.latent_dimensions,
                 self.decoder_units,
-                self.architecture_str
+                self.architecture_str,
             ] = self._get_architecture(architecture)
 
             [
@@ -67,7 +68,6 @@ class AE:
                 self.learning_rate,
                 self.out_activation,
             ] = self._get_hyperparameters(hyperparameters)
-
 
             self._build()
 
@@ -86,6 +86,7 @@ class AE:
         ae.model = load_model(model_directory)
 
         return ae
+
     ###########################################################################
     def reconstruct(self, spectra: "2D np.array") -> "2D np.array":
         """
@@ -158,8 +159,8 @@ class AE:
             y=spectra,
             batch_size=self.batch_size,
             epochs=self.epochs,
-            verbose=1, # progress bar
-            shuffle=True
+            verbose=1,  # progress bar
+            shuffle=True,
         )
 
     ###########################################################################
@@ -170,12 +171,8 @@ class AE:
         learning_rate = float(hyperparameters["learning_rate"])
         out_activation = hyperparameters["out_activation"]
 
-        return [
-            batch_size,
-            epochs,
-            learning_rate,
-            out_activation,
-        ]
+        return [batch_size, epochs, learning_rate, out_activation]
+
     ###########################################################################
     def _get_architecture(self, architecture: "dict"):
 
@@ -197,8 +194,9 @@ class AE:
             encoder_units,
             latent_dimensions,
             decoder_units,
-            tail
+            tail,
         ]
+
     ###########################################################################
     def _build(self) -> "":
         """
@@ -216,11 +214,7 @@ class AE:
 
         optimizer = Adam(learning_rate=self.learning_rate)
 
-        self.model.compile(
-            optimizer=optimizer,
-            loss="mse",
-            metrics=["mse"]
-        )
+        self.model.compile(optimizer=optimizer, loss="mse", metrics=["mse"])
 
     ###########################################################################
     def _build_ae(self):
@@ -233,8 +227,7 @@ class AE:
     def _build_decoder(self):
 
         decoder_input = Input(
-            shape=(self.latent_dimensions,),
-            name="decoder_input"
+            shape=(self.latent_dimensions,), name="decoder_input"
         )
 
         decoder_block = self._add_block(input=decoder_input, block="decoder")
@@ -242,6 +235,7 @@ class AE:
         decoder_output = self._output_layer(decoder_block)
 
         self.decoder = Model(decoder_input, decoder_output, name="decoder")
+
     ###########################################################################
     def _output_layer(self, decoder_block: "keras.Dense"):
 
@@ -284,12 +278,7 @@ class AE:
 
         for layer_index, number_units in enumerate(block_units):
 
-            x = self._add_layer(
-                x,
-                layer_index,
-                number_units,
-                block
-            )
+            x = self._add_layer(x, layer_index, number_units, block)
 
         return x
 
@@ -323,7 +312,7 @@ class AE:
         latent_layer = Dense(
             units=self.latent_dimensions,
             activation="linear",
-            name="latent_layer"
+            name="latent_layer",
         )
 
         z = latent_layer(encoder_block)
@@ -344,5 +333,6 @@ class AE:
         self.model.save(f"{directory}/ae")
         self.encoder.save(f"{directory}/encoder")
         self.decoder.save(f"{directory}/decoder")
+
 
 ###############################################################################

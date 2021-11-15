@@ -8,6 +8,7 @@ import numpy as np
 
 from autoencoders.deterministic.autoencoder import AE
 from sdss.superclasses import FileDirectory
+
 ###############################################################################
 ti = time.time()
 ###############################################################################
@@ -28,11 +29,7 @@ hyperparameters = dict(parser.items("hyperparameters"))
 ###############################################################################
 print(f"Build AE")
 
-ae = AE(
-    architecture,
-    hyperparameters,
-    reload=False
-)
+ae = AE(architecture, hyperparameters, reload=False)
 
 ae.summary()
 #############################################################################

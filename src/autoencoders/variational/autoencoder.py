@@ -1,5 +1,6 @@
 import os
 import pickle
+
 ###############################################################################
 import matplotlib
 import matplotlib.pyplot as plt
@@ -23,12 +24,13 @@ tf.compat.v1.disable_eager_execution()
 ###############################################################################
 class VAE:
     """Create a variational autoencoder"""
+
     def __init__(
         self,
-        architecture: "dict"={None},
-        hyperparameters: "dict"={None},
-        reload: "bool"=False,
-        parameters: "list"=[None],
+        architecture: "dict" = {None},
+        hyperparameters: "dict" = {None},
+        reload: "bool" = False,
+        parameters: "list" = [None],
     ) -> "VAE object":
 
         """
@@ -72,11 +74,11 @@ class VAE:
                 self.learning_rate,
                 self.reconstruction_weight,
                 self.kl_weight,
-                self.out_activation
+                self.out_activation,
             ] = parameters
 
-            encoder = ' '.join(map(str, self.encoder_units)).replace(' ', '_')
-            decoder = ' '.join(map(str, self.decoder_units)).replace(' ', '_')
+            encoder = " ".join(map(str, self.encoder_units)).replace(" ", "_")
+            decoder = " ".join(map(str, self.decoder_units)).replace(" ", "_")
             self.architecture_str = (
                 f"{encoder}_{self.latent_dimensions}_{decoder}"
             )
@@ -88,7 +90,7 @@ class VAE:
                 self.encoder_units,
                 self.latent_dimensions,
                 self.decoder_units,
-                self.architecture_str
+                self.architecture_str,
             ] = self._get_architecture(architecture)
 
             [
@@ -179,10 +181,10 @@ class VAE:
             y=spectra,
             batch_size=self.batch_size,
             epochs=self.epochs,
-            verbose=1, # progress bar
-            #workers=48,
+            verbose=1,  # progress bar
+            # workers=48,
             use_multiprocessing=True,
-            shuffle=True
+            shuffle=True,
         )
 
     ###########################################################################
@@ -201,8 +203,9 @@ class VAE:
             learning_rate,
             out_activation,
             reconstruction_weight,
-            kl_weight
+            kl_weight,
         ]
+
     ###########################################################################
     def _get_architecture(self, architecture: "dict"):
 
@@ -219,14 +222,14 @@ class VAE:
 
         decoder_units = [int(units) for units in decoder_units.split("_")]
 
-
         return [
             input_dimensions,
             encoder_units,
             latent_dimensions,
             decoder_units,
-            tail
+            tail,
         ]
+
     ###########################################################################
     def _build(self) -> "":
         """
@@ -272,8 +275,10 @@ class VAE:
         reconstruction_loss = self._reconstruction_loss(y_target, y_predicted)
         kl_loss = self._kl_loss(y_target, y_predicted)
 
-        loss = self.reconstruction_weight * reconstruction_loss\
+        loss = (
+            self.reconstruction_weight * reconstruction_loss
             + self.kl_weight * kl_loss
+        )
 
         return loss
 
@@ -317,6 +322,7 @@ class VAE:
         decoder_output = self._output_layer(decoder_block)
 
         self.decoder = Model(decoder_input, decoder_output, name="decoder")
+
     ###########################################################################
     def _output_layer(self, decoder_block: "keras.Dense"):
 
@@ -389,9 +395,7 @@ class VAE:
 
         x = layer(x)
 
-        x = BatchNormalization(
-            name=f"BN_{block}_{layer_index + 1}"
-        )(x)
+        x = BatchNormalization(name=f"BN_{block}_{layer_index + 1}")(x)
 
         standard_deviation = np.sqrt(2.0 / number_units)
 
@@ -400,22 +404,16 @@ class VAE:
     ###########################################################################
     def _latent_layer(self, x: ""):
 
-        self.mu = Dense(
-            units=self.latent_dimensions,
-            name="mu"
-        )(x)
+        self.mu = Dense(units=self.latent_dimensions, name="mu")(x)
 
         self.log_variance = Dense(
-            units=self.latent_dimensions,
-            name="log_variance"
-            )(x)
+            units=self.latent_dimensions, name="log_variance"
+        )(x)
         #######################################################################
         def sample_normal_distribution(args):
 
             mu, log_variance = args
-            epsilon = K.random_normal(
-                shape=K.shape(mu), mean=0.0, stddev=1.0
-            )
+            epsilon = K.random_normal(shape=K.shape(mu), mean=0.0, stddev=1.0)
 
             point = mu + K.exp(log_variance / 2) * epsilon
 
@@ -427,7 +425,6 @@ class VAE:
         )
 
         return x
-
 
     ###########################################################################
     def summary(self):
@@ -476,8 +473,10 @@ class VAE:
             parameters = pickle.load(file)
 
         print(parameters)
-        autoencoder = VAE(reload=True, parameters = parameters)
+        autoencoder = VAE(reload=True, parameters=parameters)
         weights_location = f"{save_directory}/weights.h5"
         autoencoder._load_weights(weights_location)
         return autoencoder
+
+
 ###############################################################################

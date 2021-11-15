@@ -37,7 +37,7 @@ ti = time.time()
     latent_dimensions,
     decoder_filters,
     decoder_kernels,
-    decoder_strides
+    decoder_strides,
 ] = helpers.get_architecture(parser)
 ############################################################################
 # network hyperparameters

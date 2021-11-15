@@ -9,6 +9,7 @@ import numpy as np
 
 from autoencoders.variational.autoencoder import VAE
 from sdss.superclasses import FileDirectory
+
 ###############################################################################
 ti = time.time()
 ###############################################################################
@@ -29,10 +30,7 @@ hyperparameters = dict(parser.items("hyperparameters"))
 ###############################################################################
 print(f"Build VAE")
 
-vae = VAE(
-    architecture,
-    hyperparameters,
-)
+vae = VAE(architecture, hyperparameters)
 
 vae.summary()
 #############################################################################
