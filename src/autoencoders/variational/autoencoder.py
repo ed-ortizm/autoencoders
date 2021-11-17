@@ -75,6 +75,7 @@ class VAE:
                 self.reconstruction_weight,
                 self.kl_weight,
                 self.out_activation,
+                self.train_history,
             ] = parameters
 
             encoder = " ".join(map(str, self.encoder_units)).replace(" ", "_")
@@ -101,6 +102,8 @@ class VAE:
                 self.reconstruction_weight,
                 self.kl_weight,
             ] = self._get_hyperparameters(hyperparameters)
+            
+            self.train_history = {} # has parameters and history keys
 
         self.encoder = None
         self.decoder = None
@@ -175,17 +178,19 @@ class VAE:
 
     ###########################################################################
     def train(self, spectra):
-        print(spectra.shape)
-        self.model.fit(
+
+        history = self.model.fit(
             x=spectra,
             y=spectra,
             batch_size=self.batch_size,
             epochs=self.epochs,
             verbose=1,  # progress bar
-            # workers=48,
             use_multiprocessing=True,
             shuffle=True,
         )
+
+        self.train_history["parameters"] = history.params
+        self.train_history["history"] = history.history
 
     ###########################################################################
     def _get_hyperparameters(self, hyperparameters: "dict"):
@@ -437,6 +442,7 @@ class VAE:
 
         self._save_parameters(directory)
         self._save_weights(directory)
+    ###########################################################################
 
     def _save_parameters(self, save_directory):
 
@@ -451,15 +457,18 @@ class VAE:
             self.reconstruction_weight,
             self.kl_weight,
             self.out_activation,
+            self.train_history
         ]
 
         save_location = f"{save_directory}/parameters.pkl"
         with open(save_location, "wb") as file:
             pickle.dump(parameters, file)
+    ###########################################################################
 
     def _save_weights(self, save_directory):
         save_location = f"{save_directory}/weights.h5"
         self.model.save_weights(save_location)
+    ###########################################################################
 
     def _load_weights(self, weights_path):
         self.model.load_weights(weights_path)
@@ -472,11 +481,7 @@ class VAE:
         with open(parameters_location, "rb") as file:
             parameters = pickle.load(file)
 
-        print(parameters)
         autoencoder = VAE(reload=True, parameters=parameters)
         weights_location = f"{save_directory}/weights.h5"
         autoencoder._load_weights(weights_location)
         return autoencoder
-
-
-###############################################################################

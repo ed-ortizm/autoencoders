@@ -35,7 +35,9 @@ vae = VAE(architecture, hyperparameters)
 vae.summary()
 #############################################################################
 # Training the model
-history = vae.train(data)
+vae.train(data)
+print(vae.train_history)
+# print(vae.train_history.history)
 # save model
 model_directory = parser.get("directories", "output")
 model_directory = f"{model_directory}/{vae.architecture_str}"
