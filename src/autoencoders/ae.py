@@ -19,8 +19,295 @@ from tensorflow.keras.optimizers import Adam
 from tensorflow.keras.utils import plot_model
 
 ###############################################################################
+import tensorflow as tf
+from tensorflow import keras
+###############################################################################
+# taken from tf tutorias website
+class SamplingLayer(keras.layers.Layer):
+    """
+    Uses (z_mean, z_log_variance) to sample z, the latent vector.
+    """
+    ###########################################################################
+    def __init__(self, name: str="sampling_layer"):
+
+        super(SamplingLayer, self).__init__(name=name)
+    ###########################################################################
+    def call(self, inputs):
+        z_mean, z_log_var = inputs
+        batch = tf.shape(z_mean)[0]
+        dim = tf.shape(z_mean)[1]
+        epsilon = tf.keras.backend.random_normal(shape=(batch, dim))
+        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+    ###########################################################################
+    def get_config(self):
+
+        return {"name" : self.name}
+###############################################################################
+class VAEtf:
+    """
+    Create an AE model using the keras functional API, where custom layers
+    are created by subclassing keras.layers.Layer, the same applies for custom
+    metrics and losses.
+
+    For all custom objects, the .get_config method is implemented to be able to
+    serialize and clone the model.
+    """
+    ###########################################################################
+    def __init__(self,
+        architecture: dict={None},
+        hyperparameters: dict={None},
+        model_name: str="VAE",
+        is_variational: bool=True,
+        reload: bool=False,
+    ):
+        """
+        PARAMETERS
+            input_dimensions:
+            architecture:
+            latent_dimensions:
+            decoder_architecture:
+            hyperparameters:
+            reload:
+        """
+
+        self.model_name = model_name
+        self.is_variational = is_variational
+        if reload is True:
+            pass
+
+        else:
+
+            self.architecture = architecture
+            self.hyperparameters = hyperparameters
+
+            self.original_input = None
+            self.encoder = None
+            self.decoder = None
+            self.model = None
+
+            self._build_model()
+    ###########################################################################
+    def _build_model(self) -> None:
+        """
+        Builds the the auto encoder model
+        """
+
+        self._build_encoder()
+        self._build_decoder()
+        self._build_ae()
+        self._compile()
+    ###########################################################################
+    def _compile(self):
+
+        optimizer =  keras.optimizers.Adam(
+            learning_rate=self.hyperparameters["learning_rate"]
+        )
+
+        custom_loss = MyCustomLoss(self.hyperparameters["reconstruction_weight"])
+        # custom_loss *= self.hyperparameters["reconstruction_weight"]
+
+        self.model.compile(
+            optimizer=optimizer,
+            loss= custom_loss,
+            metrics=["mse"]
+        )
+
+    ###########################################################################
+    def _build_ae(self):
+
+        output = self.decoder(self.encoder(self.original_input))
+
+        self.model = keras.Model(
+            self.original_input,
+            output,
+            name=self.model_name
+        )
+
+        # if self.is_variational is True:
+
+       #      self.model.add_loss(self.kl_loss)
+
+    ###########################################################################
+    def _build_decoder(self):
+        """Build decoder"""
+
+        decoder_input = keras.Input(
+            shape=(self.architecture["latent_dimensions"],),
+            name="decoder_input"
+        )
+
+        block_output = self._add_block(decoder_input, block="decoder")
+
+        decoder_output = self._output_layer(block_output)
+
+        self.decoder = keras.Model(
+            decoder_input,
+            decoder_output,
+            name="decoder"
+            )
+    ###########################################################################
+    def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
+
+        output_layer = keras.layers.Dense(
+            units=self.architecture["input_dimensions"],
+            activation=self.hyperparameters["output_activation"],
+            name="decoder_output",
+        )
+
+        output_tensor = output_layer(input_tensor)
+
+        return output_tensor
+
+    ###########################################################################
+    def _build_encoder(self):
+        """Build encoder"""
+
+        encoder_input = keras.Input(
+            shape=(self.architecture["input_dimensions"],),
+            name="encoder_input"
+        )
+
+        self.original_input = encoder_input
+
+        block_output = self._add_block(encoder_input, block="encoder")
+
+        if self.is_variational is True:
+
+            self.z, kl_loss = self._sampling_layer(block_output)
+            self.kl_loss = self.hyperparameters["kl_weight"] * kl_loss
+
+        else:
+
+            z_layer = keras.layers.Dense(
+                units=self.architecture["latent_dimensions"],
+                activation="relu",
+                name=f"z_deterministic",
+            )
+
+            self.z = z_layer(block_output)
+
+        self.encoder = keras.Model(encoder_input, self.z, name="encoder")
+
+        if self.is_variational is True:
+
+            self.encoder.add_loss(self.kl_loss)
+
+    ###########################################################################
+    def _add_block(self,
+        input_tensor: tf.Tensor,
+        block: str
+    ) -> tf.Tensor:
+        """
+        Build an graph of dense layers
+
+        PARAMETERS
+            input_tensor:
+            block:
+
+        OUTPUT
+            x:
+        """
+        x = input_tensor
+
+        if block == "encoder":
+
+            block_units = self.architecture["encoder"]
+
+        else:
+
+            block_units = self.architecture["decoder"]
+
+        for layer_index, number_units in enumerate(block_units):
+
+            # in the first iteration, x is the input tensor in the block
+            x = self._get_next_dense_layer_output(
+                x,
+                layer_index,
+                number_units,
+                block
+            )
+
+        return x
+
+    ###########################################################################
+    def _get_next_dense_layer_output(
+        self,
+        input_tensor: tf.Tensor, # the output of the previous layer
+        layer_index: int,
+        number_units: int,
+        block: str,
+    ) -> tf.Tensor:
+
+        """
+        Define and get output of next Dense layer
+
+        PARAMETERS
+            input_tensor:
+            layer_index:
+            number_units:
+            block:
+
+        OUTPUT
+            output_tensor:
+        """
+
+        layer = keras.layers.Dense(
+            units=number_units,
+            activation="relu",
+            name=f"{block}_{layer_index + 1:02d}",
+        )
+
+        output_tensor = layer(input_tensor)
+
+        return output_tensor
+
+    ###########################################################################
+    def _sampling_layer(self,
+        encoder_output : tf.Tensor
+    ) -> [tf.Tensor, tf.Tensor, tf.Tensor]:
+
+        """
+        Sample output of the encoder and add the kl loss
+
+        PARAMETERS
+            encoder_output:
+
+        OUTPUT
+            z, z_mean, z_log_var
+        """
+
+        mu_layer = keras.layers.Dense(
+            units=self.architecture["latent_dimensions"],
+            name="z_mean"
+        )
+
+        z_mean = mu_layer(encoder_output)
+
+        log_var_layer = keras.layers.Dense(
+            units=self.architecture["latent_dimensions"],
+            name="z_log_variance"
+        )
+
+        z_log_var = log_var_layer(encoder_output)
+
+        kl_loss = -0.5 * tf.reduce_mean(
+            z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1
+        )
+
+        sampling_inputs = (z_mean, z_log_var)
+
+        sample_layer = SamplingLayer(name="z_variational")
+
+        z = sample_layer(sampling_inputs)
+
+        return z, kl_loss
+
+    ###########################################################################
+###############################################################################
+###############################################################################
 tf.compat.v1.disable_eager_execution()
 # this is necessary because I use custom loss function
+
 ###############################################################################
 class VAE:
     """Create a variational autoencoder"""
@@ -102,7 +389,7 @@ class VAE:
                 self.reconstruction_weight,
                 self.kl_weight,
             ] = self._get_hyperparameters(hyperparameters)
-            
+
             self.train_history = {} # has parameters and history keys
 
         self.encoder = None
