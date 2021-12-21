@@ -26,30 +26,33 @@ class MyCustomLoss(keras.losses.Loss):
     ###########################################################################
     def __init__(self,
         name: str,
-        keras_loss: function,
-        regularization_factor: float=1.,
+        keras_loss: keras.losses.Loss,
+        weight_factor: float=1.,
     ):
         """
         PARAMETERS
             keras_loss: a builtin keras loss function, for instance,
                 tf.losses.MSE
             name: name of the custom function
-            regularization_factor: weigth factor for keras_loss function
+            regularization_factor: weight factor for keras_loss function
         """
         super().__init__(name=name)
         self.keras_loss = keras_loss
-        self.regularization_factor = regularization_factor
+        self.weight_factor = weight_factor
 
     ###########################################################################
     def call(self, y_true, y_pred):
-        return self.regularization_factor * self.keras_loss(y_true, y_pred)
+
+        loss = self.weight_factor * self.keras_loss(y_true, y_pred)
+
+        return loss
     ###########################################################################
     # necessary to serialize the custom loss
     def get_config(self):
         return {
             "name" : self.name,
             "keras_loss": self.keras_loss,
-            "regularization_factor" : self.regularization_factor
+            "weight_factor" : self.weight_factor,
         }
     ###########################################################################
     # necessary to serialize the custom loss

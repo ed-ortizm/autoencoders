@@ -7,7 +7,8 @@ import time
 ###############################################################################
 import numpy as np
 
-from autoencoders.variational.tfae import VAEtf, MyCustomLoss
+from autoencoders.ae import AutoEncoder, SamplingLayer
+from autoencoders.customObjects import MyCustomLoss
 from sdss.superclasses import ConfigurationFile, FileDirectory
 config_handler = ConfigurationFile()
 ###############################################################################
@@ -18,7 +19,7 @@ parser.read("test.ini")
 ###############################################################################
 # load data
 print(f"Load data")
-data = np.random.normal(size=(1000, 100))
+data = np.ones(shape=(10_000, 100))
 input_dimensions = data.shape[1]
 ###############################################################################
 architecture = config_handler.section_to_dictionary(
@@ -38,24 +39,28 @@ hyperparameters = config_handler.section_to_dictionary(
 ###############################################################################
 print(f"Build VAE")
 
-vae = VAEtf(architecture, hyperparameters, is_variational=True)
-save_to = "/home/edgar/Download/test_model"
+import tensorflow as tf
+from tensorflow import keras
+
+vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
+save_to = "/home/edgar/Downloads/test_model"
+print(vae.model.summary())
+print(vae.encoder.summary())
+print(vae.decoder.summary())
+# print(vae.model.losses)
 vae.model.save(save_to)
-# print(vae.model.summary())
-# print(vae.encoder.summary())
-# print(vae.decoder.summary())
-del vae
-# from tensorflow import keras
-# keras.models.load_model(
+# del vae
+# vae = keras.models.load_model(
 #     save_to,
-#     custom_objects={"MyCustomLoss":MyCustomLoss}
+#     custom_objects={"MyCustomLoss":MyCustomLoss, "SamplingLayer":SamplingLayer}
 # )
+# print(vae.losses)
 # vae.summary()
 # #############################################################################
 # # Training the model
-# vae.train(data)
+vae.train(data)
 # print(vae.train_history)
-# # print(vae.train_history.history)
+# print(vae.train_history.history)
 # # save model
 # model_directory = parser.get("directories", "output")
 # model_directory = f"{model_directory}/{vae.architecture_str}"
