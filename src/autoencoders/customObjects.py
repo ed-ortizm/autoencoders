@@ -1,5 +1,6 @@
 import tensorflow as tf
 from tensorflow import keras
+
 ###############################################################################
 class MyCustomMetric(keras.metrics.Metric):
     def __init__(self, name="my_custom_metric", **kwargs):
@@ -17,17 +18,20 @@ class MyCustomMetric(keras.metrics.Metric):
         # The state of the metric will be reset at the start of each epoch.
         pass
 
+
 ###############################################################################
 class MyCustomLoss(keras.losses.Loss):
     """
     Create custom loss function for autoencoders using prebuilt losses
     in keras.losse, for instance, keras.losses.MSE
     """
+
     ###########################################################################
-    def __init__(self,
+    def __init__(
+        self,
         name: str,
         keras_loss: keras.losses.Loss,
-        weight_factor: float=1.,
+        weight_factor: float = 1.0,
     ):
         """
         PARAMETERS
@@ -46,14 +50,16 @@ class MyCustomLoss(keras.losses.Loss):
         loss = self.weight_factor * self.keras_loss(y_true, y_pred)
 
         return loss
+
     ###########################################################################
     # necessary to serialize the custom loss
     def get_config(self):
         return {
-            "name" : self.name,
+            "name": self.name,
             "keras_loss": self.keras_loss,
-            "weight_factor" : self.weight_factor,
+            "weight_factor": self.weight_factor,
         }
+
     ###########################################################################
     # necessary to serialize the custom loss
     @classmethod

@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import numpy as np
+
 ###############################################################################
+
 
 def plot_train_history(train_history: dict, kl_weight: np.float, save_to: str):
 
@@ -37,11 +39,7 @@ def plot_train_history(train_history: dict, kl_weight: np.float, save_to: str):
     reconstruction = np.array(train_history["history"]["mse"])
     kl_divergence = (loss - reconstruction) / kl_weight
 
-    fig, axs = plt.subplots(
-        nrows=2 , ncols=1,
-        figsize=(8, 5),
-        sharex=True
-    )
+    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8, 5), sharex=True)
 
     axs[0].plot(loss, label="loss")
     axs[0].plot(reconstruction, label="MSE")
@@ -50,10 +48,11 @@ def plot_train_history(train_history: dict, kl_weight: np.float, save_to: str):
     axs[1].plot(kl_divergence, label="KL-divergence")
     axs[1].legend()
 
-    axs[1].set_xlabel(f'epochs')
+    axs[1].set_xlabel(f"epochs")
 
-    fig.savefig(f'{save_to}.pdf')
+    fig.savefig(f"{save_to}.pdf")
 
     plt.close()
+
 
 ###############################################################################

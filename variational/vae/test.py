@@ -10,6 +10,7 @@ import numpy as np
 from autoencoders.ae import AutoEncoder, SamplingLayer
 from autoencoders.customObjects import MyCustomLoss
 from sdss.superclasses import ConfigurationFile, FileDirectory
+
 config_handler = ConfigurationFile()
 ###############################################################################
 ti = time.time()
@@ -23,16 +24,14 @@ data = np.ones(shape=(10_000, 100))
 input_dimensions = data.shape[1]
 ###############################################################################
 architecture = config_handler.section_to_dictionary(
-    parser.items("architecture"),
-    value_separators = ["_"]
-    )
+    parser.items("architecture"), value_separators=["_"]
+)
 
 architecture["input_dimensions"] = input_dimensions
 
 hyperparameters = config_handler.section_to_dictionary(
-    parser.items("hyperparameters"),
-    value_separators = []
-    )
+    parser.items("hyperparameters"), value_separators=[]
+)
 
 # print(architecture)
 # print(hyperparameters)
@@ -43,22 +42,17 @@ import tensorflow as tf
 from tensorflow import keras
 
 vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
-save_to = "/home/edgar/Downloads/test_model"
-print(vae.model.summary())
-print(vae.encoder.summary())
-print(vae.decoder.summary())
 # print(vae.model.losses)
-vae.model.save(save_to)
-# del vae
 # vae = keras.models.load_model(
 #     save_to,
 #     custom_objects={"MyCustomLoss":MyCustomLoss, "SamplingLayer":SamplingLayer}
 # )
-# print(vae.losses)
 # vae.summary()
 # #############################################################################
 # # Training the model
 vae.train(data)
+save_to = "/home/edgar/Downloads"
+vae.save_model("vaetest", save_to)
 # print(vae.train_history)
 # print(vae.train_history.history)
 # # save model
