@@ -54,7 +54,7 @@ vae.train(data)
 print(vae.train_history.history)
 print(vae.train_history.params)
 print(vae.train_history.model)
-print(dir(vae.train_history))""
+print(dir(vae.train_history))
 save_to = "/home/edgar/Downloads"
 vae.save_model(save_to)
 # print(vae.train_history)

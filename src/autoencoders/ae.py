@@ -71,7 +71,7 @@ class AutoEncoder:
         model_name: str = "VAE",
         is_variational: bool = True,
         reload: bool = False,
-        reload_from: str=".",
+        reload_from: str = ".",
     ):
         """
         PARAMETERS
@@ -83,18 +83,17 @@ class AutoEncoder:
             reload:
         """
 
-
         if reload is True:
 
             self.model = keras.models.load_model(
-                f"{reload_from}/{model_name},
-                custom_objects = {
-                    "MyCustomLoss" : MyCustomLoss,
-                    "SamplingLayer": SamplingLayer
-                }
+                f"{reload_from}/{model_name}",
+                custom_objects={
+                    "MyCustomLoss": MyCustomLoss,
+                    "SamplingLayer": SamplingLayer,
+                },
             )
 
-            # self._set_class_instances_from_saved_model()
+            self._set_class_instances_from_saved_model()
 
         else:
 
@@ -118,9 +117,8 @@ class AutoEncoder:
     ###########################################################################
     def _set_class_instances_from_saved_model(self):
 
-        self.model_name = self.model.name
-
         #######################################################################
+        self.model_name = self.model.name
         # Get encoder and decoder
         for submodule in self.model.submodules:
 
@@ -132,7 +130,7 @@ class AutoEncoder:
 
                 self.decoder = submodule
         #######################################################################
-        # get architecture
+        # the rest of the parameters would be loaded from a pickle file :P
 
     ###########################################################################
     def train(self, spectra: np.array) -> keras.callbacks.History:
@@ -215,6 +213,7 @@ class AutoEncoder:
         spectra = self.decoder.predict(z)
 
         return spectra
+
     ###########################################################################
     def summary(self):
         self.encoder.summary()
@@ -222,7 +221,8 @@ class AutoEncoder:
         self.model.summary()
 
     ###########################################################################
-    def save_model(self,
+    def save_model(
+        self,
         # model_name: str,
         save_to: str,
         # save_encoder: bool = True,
@@ -239,6 +239,7 @@ class AutoEncoder:
         #
         # if save_decoder is True:
         #     self.decoder.save(f"{save_to}/{model_name}/decoder")
+
     ###########################################################################
     def _build_model(self) -> None:
         """
@@ -531,7 +532,7 @@ class VAE_old:
                 self.kl_weight,
             ] = self._get_hyperparameters(hyperparameters)
 
-            self.train_history = {} # has parameters and history keys
+            self.train_history = {}  # has parameters and history keys
 
         self.encoder = None
         self.decoder = None
@@ -870,6 +871,7 @@ class VAE_old:
 
         self._save_parameters(directory)
         self._save_weights(directory)
+
     ###########################################################################
 
     def _save_parameters(self, save_directory):
@@ -885,17 +887,19 @@ class VAE_old:
             self.reconstruction_weight,
             self.kl_weight,
             self.out_activation,
-            self.train_history
+            self.train_history,
         ]
 
         save_location = f"{save_directory}/parameters.pkl"
         with open(save_location, "wb") as file:
             pickle.dump(parameters, file)
+
     ###########################################################################
 
     def _save_weights(self, save_directory):
         save_location = f"{save_directory}/weights.h5"
         self.model.save_weights(save_location)
+
     ###########################################################################
 
     def _load_weights(self, weights_path):
