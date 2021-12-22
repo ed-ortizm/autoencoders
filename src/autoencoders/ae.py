@@ -71,6 +71,7 @@ class AutoEncoder:
         model_name: str = "VAE",
         is_variational: bool = True,
         reload: bool = False,
+        reload_from: str=".",
     ):
         """
         PARAMETERS
@@ -82,13 +83,23 @@ class AutoEncoder:
             reload:
         """
 
-        self.model_name = model_name
-        self.is_variational = is_variational
 
         if reload is True:
-            pass
+
+            self.model = keras.models.load_model(
+                f"{reload_from}/{model_name},
+                custom_objects = {
+                    "MyCustomLoss" : MyCustomLoss,
+                    "SamplingLayer": SamplingLayer
+                }
+            )
+
+            # self._set_class_instances_from_saved_model()
 
         else:
+
+            self.model_name = model_name
+            self.is_variational = is_variational
 
             self.architecture = architecture
             self.hyperparameters = hyperparameters
@@ -103,6 +114,25 @@ class AutoEncoder:
             self.train_history = None
 
             self._build_model()
+
+    ###########################################################################
+    def _set_class_instances_from_saved_model(self):
+
+        self.model_name = self.model.name
+
+        #######################################################################
+        # Get encoder and decoder
+        for submodule in self.model.submodules:
+
+            if submodule.name == "encoder":
+
+                self.encoder = submodule
+
+            elif submodule.name == "decoder":
+
+                self.decoder = submodule
+        #######################################################################
+        # get architecture
 
     ###########################################################################
     def train(self, spectra: np.array) -> keras.callbacks.History:
@@ -193,19 +223,22 @@ class AutoEncoder:
 
     ###########################################################################
     def save_model(self,
-        model_name: str,
+        # model_name: str,
         save_to: str,
-        save_encoder: bool = True,
-        save_decoder: bool = True
+        # save_encoder: bool = True,
+        # save_decoder: bool = True
     ) -> None:
 
-        self.model.save(f"{save_to}/{model_name}")
+        self.model.save(f"{save_to}/{self.model_name}")
 
-        if save_encoder is True:
-            self.encoder.save(f"{save_to}/encoder")
+        # Looks like there is no need for this, since Model.sumodules
+        # instance has all the info I need :P
 
-        if save_decoder is True:
-            self.decoder.save(f"{save_to}/decoder")
+        # if save_encoder is True:
+        #     self.encoder.save(f"{save_to}/{model_name}/encoder")
+        #
+        # if save_decoder is True:
+        #     self.decoder.save(f"{save_to}/{model_name}/decoder")
     ###########################################################################
     def _build_model(self) -> None:
         """

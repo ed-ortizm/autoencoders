@@ -51,8 +51,12 @@ vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
 # #############################################################################
 # # Training the model
 vae.train(data)
+print(vae.train_history.history)
+print(vae.train_history.params)
+print(vae.train_history.model)
+print(dir(vae.train_history))""
 save_to = "/home/edgar/Downloads"
-vae.save_model("vaetest", save_to)
+vae.save_model(save_to)
 # print(vae.train_history)
 # print(vae.train_history.history)
 # # save model
