@@ -7,8 +7,9 @@ import time
 ###############################################################################
 import numpy as np
 
-from autoencoders.variational.autoencoder import VAE
-from sdss.superclasses import FileDirectory
+from autoencoders.ae import AutoEncoder, SamplingLayer
+from autoencoders.customObjects import MyCustomLoss
+from sdss.superclasses import ConfigurationFile, FileDirectory
 
 ###############################################################################
 ti = time.time()
@@ -23,21 +24,25 @@ data_name = parser.get("files", "train")
 data = np.load(f"{data_directory}/{data_name}")
 input_dimensions = data.shape[1]
 ###############################################################################
-architecture = dict(parser.items("architecture"))
+architecture = config_handler.section_to_dictionary(
+    parser.items("architecture"), value_separators=["_"]
+)
+
 architecture["input_dimensions"] = input_dimensions
 
-hyperparameters = dict(parser.items("hyperparameters"))
+hyperparameters = config_handler.section_to_dictionary(
+    parser.items("hyperparameters"), value_separators=[]
+)
 ###############################################################################
-print(f"Build VAE")
+print(f"Build AutoEncoder")
 
-vae = VAE(architecture, hyperparameters)
+vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
 
-vae.summary()
+number_params = vae.model.count_params()
+print(f"\nThe model has {number_params} parameters", end="\n")
 #############################################################################
 # Training the model
 vae.train(data)
-print(vae.train_history)
-# print(vae.train_history.history)
 # save model
 model_directory = parser.get("directories", "output")
 model_directory = f"{model_directory}/{vae.architecture_str}"
