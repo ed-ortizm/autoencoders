@@ -86,7 +86,7 @@ class AutoEncoder:
         if reload is True:
 
             self.model = keras.models.load_model(
-                f"{reload_from}/{model_name}",
+                f"{reload_from}",
                 custom_objects={
                     "MyCustomLoss": MyCustomLoss,
                     "SamplingLayer": SamplingLayer,
@@ -229,7 +229,7 @@ class AutoEncoder:
         # save_decoder: bool = True
     ) -> None:
 
-        self.model.save(f"{save_to}/{self.model_name}")
+        self.model.save(f"{save_to}")
 
         # Looks like there is no need for this, since Model.sumodules
         # instance has all the info I need :P

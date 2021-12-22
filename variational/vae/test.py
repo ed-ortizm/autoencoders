@@ -42,29 +42,15 @@ import tensorflow as tf
 from tensorflow import keras
 
 vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
-# print(vae.model.losses)
-# vae = keras.models.load_model(
-#     save_to,
-#     custom_objects={"MyCustomLoss":MyCustomLoss, "SamplingLayer":SamplingLayer}
-# )
-# vae.summary()
 # #############################################################################
-# # Training the model
+# Training the model
 vae.train(data)
-print(vae.train_history.history)
-print(vae.train_history.params)
-print(vae.train_history.model)
-print(dir(vae.train_history))
 save_to = "/home/edgar/Downloads"
 vae.save_model(save_to)
-# print(vae.train_history)
-# print(vae.train_history.history)
-# # save model
-# model_directory = parser.get("directories", "output")
-# model_directory = f"{model_directory}/{vae.architecture_str}"
-# FileDirectory().check_directory(model_directory, exit=False)
-#
-# vae.save_model(model_directory)
-# ###############################################################################
-# tf = time.time()
-# print(f"Running time: {tf-ti:.2f}")
+da = keras.models.load_model(
+    save_to,
+    custom_objects={"MyCustomLoss":MyCustomLoss, "SamplingLayer":SamplingLayer}
+)
+###############################################################################
+tf = time.time()
+print(f"Running time: {tf-ti:.2f}")
