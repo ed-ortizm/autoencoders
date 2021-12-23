@@ -14,6 +14,7 @@ from sdss.superclasses import ConfigurationFile, FileDirectory
 ###############################################################################
 ti = time.time()
 ###############################################################################
+config_handler = ConfigurationFile()
 parser = ConfigParser(interpolation=ExtendedInterpolation())
 parser.read("vae.ini")
 ###############################################################################
@@ -44,8 +45,11 @@ print(f"\nThe model has {number_params} parameters", end="\n")
 # Training the model
 vae.train(data)
 # save model
+architecture_str = architecture["encoder"]\
+    + [architecture["latent_dimensions"]] + architecture["decoder"]
+architecture_str = "_".join(str(unit) for unit in architecture_str)
 model_directory = parser.get("directories", "output")
-model_directory = f"{model_directory}/{vae.architecture_str}"
+model_directory = f"{model_directory}/{architecture_str}"
 FileDirectory().check_directory(model_directory, exit=False)
 
 vae.save_model(model_directory)
