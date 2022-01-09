@@ -105,7 +105,8 @@ class AutoEncoder:
 
             self.original_input = None
             self.encoder = None
-            self.kl_divergence = None
+            self.KLD = None # KL Divergence
+            self.MMD = None # Maximum Mean Discrepancy
             self.decoder = None
             self.original_output = None
             self.model = None
@@ -277,7 +278,10 @@ class AutoEncoder:
         )
 
         if self.is_variational is True:
-            self.model.add_loss(self.kl_divergence)
+            KLD = self.KLD * self.hyperparameters["kl_weight"]
+            MMD = self.MMD #* self.hyperparameters["MMD_weight"]
+            self.model.add_loss(KLD)
+            self.model.add_loss(MMD)
 
     ###########################################################################
     def _build_decoder(self):
@@ -327,11 +331,55 @@ class AutoEncoder:
             z, z_mean, z_log_var = self._sampling_layer(block_output)
 
             # To add later on to the model before compiling
-            self.kl_divergence = -0.5 * tf.reduce_mean(
+
+            # Compute KLD
+            self.KLD = -0.5 * tf.reduce_mean(
                 z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1
             )
 
-            self.kl_divergence *= self.hyperparameters["kl_weight"]
+            # Compute MMD
+            batch = tf.shape(z_mean)[0]
+
+            z_prime = K.random_normal(
+                shape=(batch, self.latent_dimensions)
+            )
+
+            def compute_kernel(x, y):
+
+                batch = tf.shape(x)[0]
+
+                tiled_x = tf.tile(
+                    tf.reshape(
+                        x,
+                        tf.stack([batch, 1, self.latent_dimensions])
+                    ),
+                    tf.stack([1, batch, 1])
+                )
+
+
+                tiled_y = tf.tile(
+                    tf.reshape(
+                        y,
+                        tf.stack([1, batch, self.latent_dimensions])
+                    ),
+                    tf.stack([batch, 1, 1])
+                )
+
+                kernel = tf.exp(
+                    -tf.reduce_mean(
+                        tf.square(tiled_x - tiled_y),
+                        axis=2
+                    ) / tf.cast(self.latent_dimensions, tf.float32)
+                )
+
+                return kernel
+
+
+            z_prime_kernel = compute_kernel(z_prime, z_prime)
+            z_prime_z_kernel = compute_kernel(z_prime, z)
+            z_kernel = compute_kernel(z, z)
+
+            self.MDD = tf.reduce_mean(z_prime_kernel) + tf.reduce_mean(z_kernel) - 2 * tf.reduce_mean(z_prime_z_kernel)
 
         else:
 
