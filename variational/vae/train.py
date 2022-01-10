@@ -34,6 +34,7 @@ architecture["input_dimensions"] = input_dimensions
 hyperparameters = config_handler.section_to_dictionary(
     parser.items("hyperparameters"), value_separators=[]
 )
+print(hyperparameters)
 ###############################################################################
 print(f"Build AutoEncoder")
 
@@ -41,6 +42,7 @@ vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
 
 number_params = vae.model.count_params()
 print(f"\nThe model has {number_params} parameters", end="\n")
+vae.summary()
 #############################################################################
 # Training the model
 vae.train(data)

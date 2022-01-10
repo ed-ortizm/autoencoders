@@ -134,8 +134,14 @@ class AutoEncoder:
         # the rest of the parameters would be loaded from a pickle file :P
 
     ###########################################################################
-    def train(self, spectra: np.array) -> keras.callbacks.History:
+    def train(self,
+        spectra: np.array,
+    ) -> keras.callbacks.History:
 
+        stopping_criteria = keras.callbacks.EarlyStopping(
+            patience=self.hyperparameters["patience"],
+            verbose=1
+        )
         history = self.model.fit(
             x=spectra,
             y=spectra,
@@ -144,6 +150,7 @@ class AutoEncoder:
             verbose=1,  # progress bar
             # use_multiprocessing=True,
             shuffle=True,
+
         )
 
         self.train_history = history
@@ -278,8 +285,10 @@ class AutoEncoder:
         )
 
         if self.is_variational is True:
-            KLD = self.KLD * self.hyperparameters["kl_weight"]
-            MMD = self.MMD #* self.hyperparameters["MMD_weight"]
+            alpha = self.hyperparameters["alpha"]
+            lambda_ = self.hyperparameters["lambda"]
+            KLD = self.KLD * (1 - alpha)
+            MMD = self.MMD * (alpha + lambda_ -1)
             self.model.add_loss(KLD)
             self.model.add_loss(MMD)
 
@@ -340,8 +349,8 @@ class AutoEncoder:
             # Compute MMD
             batch = tf.shape(z_mean)[0]
 
-            z_prime = K.random_normal(
-                shape=(batch, self.latent_dimensions)
+            z_prime = keras.backend.random_normal(
+                shape=(batch, self.architecture["latent_dimensions"])
             )
 
             def compute_kernel(x, y):
@@ -351,7 +360,7 @@ class AutoEncoder:
                 tiled_x = tf.tile(
                     tf.reshape(
                         x,
-                        tf.stack([batch, 1, self.latent_dimensions])
+                        tf.stack([batch, 1, self.architecture["latent_dimensions"]])
                     ),
                     tf.stack([1, batch, 1])
                 )
@@ -360,7 +369,7 @@ class AutoEncoder:
                 tiled_y = tf.tile(
                     tf.reshape(
                         y,
-                        tf.stack([1, batch, self.latent_dimensions])
+                        tf.stack([1, batch, self.architecture["latent_dimensions"]])
                     ),
                     tf.stack([batch, 1, 1])
                 )
@@ -369,7 +378,7 @@ class AutoEncoder:
                     -tf.reduce_mean(
                         tf.square(tiled_x - tiled_y),
                         axis=2
-                    ) / tf.cast(self.latent_dimensions, tf.float32)
+                    ) / tf.cast(self.architecture["latent_dimensions"], tf.float32)
                 )
 
                 return kernel
@@ -379,7 +388,7 @@ class AutoEncoder:
             z_prime_z_kernel = compute_kernel(z_prime, z)
             z_kernel = compute_kernel(z, z)
 
-            self.MDD = tf.reduce_mean(z_prime_kernel) + tf.reduce_mean(z_kernel) - 2 * tf.reduce_mean(z_prime_z_kernel)
+            self.MMD = tf.reduce_mean(z_prime_kernel) + tf.reduce_mean(z_kernel) - 2 * tf.reduce_mean(z_prime_z_kernel)
 
         else:
 
