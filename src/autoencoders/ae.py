@@ -321,7 +321,8 @@ class AutoEncoder:
             alpha = self.hyperparameters["alpha"]
             lambda_ = self.hyperparameters["lambda"]
             KLD = self.KLD * (1 - alpha)
-            MMD = self.MMD * (alpha + lambda_ -1)
+            MMD = self.hyperparameters["mmd_weight"] * self.MMD
+            MMD *= (alpha + lambda_ -1)
             self.model.add_loss(KLD)
             self.model.add_loss(MMD)
 
