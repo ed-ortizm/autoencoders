@@ -46,7 +46,7 @@ print(hyperparameters)
 ###############################################################################
 print(f"Build AutoEncoder")
 
-vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
+vae = AutoEncoder(architecture, hyperparameters)
 
 number_params = vae.model.count_params()
 print(f"\nThe model has {number_params} parameters", end="\n")

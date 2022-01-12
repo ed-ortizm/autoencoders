@@ -91,7 +91,15 @@ class AutoEncoder:
             self.KLD = None # KL Divergence
             self.MMD = None # Maximum Mean Discrepancy
 
-            self._set_class_instances_from_saved_model(reload_from)
+            [
+            self.encoder,
+            self.decoder,
+            self.architecture,
+            self.hyperparameters,
+            self.train_history
+            ] = self._set_class_instances_from_saved_model(reload_from)
+
+            self.architecture["model_name"] = self.model.name
 
         else:
 
@@ -107,49 +115,38 @@ class AutoEncoder:
             self.original_input = None
             self.original_output = None
 
-            self.train_history = None
+            # Contains training log
+            self.train_history = {}
 
             self._build_model()
 
     ###########################################################################
-    def _set_class_instances_from_saved_model(self, reload_from: str) -> None:
+    def _set_class_instances_from_saved_model(self, reload_from: str) -> list:
 
         #######################################################################
-        self.architecture["model_name"] = self.model.name
         # Get encoder and decoder
         for submodule in self.model.submodules:
 
             if submodule.name == "encoder":
 
-                self.encoder = submodule
+                encoder = submodule
 
             elif submodule.name == "decoder":
 
-                self.decoder = submodule
+                decoder = submodule
         #######################################################################
         file_location = f"{reload_from}/parameters_and_train_history.pkl"
         with open(file_location, "rb") as file:
             parameters = pickle.load(file)
 
         [
-        self.architecture,
-        self.hyperparameters,
-        self.train_history
+        architecture,
+        hyperparameters,
+        train_history
         ] = parameters
-        # the rest of the parameters would be loaded from a pickle file :P
-        # self.architecture["is_variational"] = is_variational
-        #
-        # self.architecture = architecture
-        # self.hyperparameters = hyperparameters
-        #
-        # self.original_input = None
-        # # Not sure how to load this :O
-        # self.KLD = None # KL Divergence
-        # self.MMD = None # Maximum Mean Discrepancy
-        # self.original_output = None
-        # self.model = None
-        #
-        # self.train_history = None
+        print(train_history)
+
+        return [encoder, decoder, architecture, hyperparameters, train_history]
 
     ###########################################################################
     def train(self,
@@ -157,14 +154,20 @@ class AutoEncoder:
     ) -> keras.callbacks.History:
 
         stopping_criteria = keras.callbacks.EarlyStopping(
-            monitor="mse",
-            patience=self.hyperparameters["patience"],
+            monitor="loss",
+            patience=self.hyperparameters["early_stop_patience"],
             verbose=1,
             restore_best_weights = True,
         )
+        learning_rate_schedule = keras.callbacks.ReduceLROnPlateau(
+            monitor='mse',
+            factor=0.1,
+            patience=self.hyperparameters["learning_rate_patience"],
+            verbose=1,
+            min_lr=0,
+            mode="min"
+        )
 
-        print(type(self.hyperparameters["use_multiprocessing"]))
-        print(type(self.hyperparameters["workers"]))
         history = self.model.fit(
             x=spectra,
             y=spectra,
@@ -178,7 +181,9 @@ class AutoEncoder:
 
         )
 
-        self.train_history = history
+        # self.train_history = history
+        self.train_history["parameters"] = history.params
+        self.train_history["history"] = history.history
 
         return history
 
