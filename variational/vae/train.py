@@ -1,6 +1,14 @@
 #!/usr/bin/env python3.8
-from configparser import ConfigParser, ExtendedInterpolation
 import os
+# Set environment variables to disable multithreading as users will probably
+# want to set the number of cores to the max of their computer.
+os.environ["OMP_NUM_THREADS"] = "1"
+os.environ["OPENBLAS_NUM_THREADS"] = "1"
+os.environ["MKL_NUM_THREADS"] = "1"
+os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
+os.environ["NUMEXPR_NUM_THREADS"] = "1"
+###############################################################################
+from configparser import ConfigParser, ExtendedInterpolation
 import sys
 import time
 
@@ -42,9 +50,10 @@ vae = AutoEncoder(architecture, hyperparameters, is_variational=True)
 
 number_params = vae.model.count_params()
 print(f"\nThe model has {number_params} parameters", end="\n")
-vae.summary()
+# vae.summary()
 #############################################################################
 # Training the model
+print("Train the model")
 vae.train(data)
 # save model
 architecture_str = architecture["encoder"]\
@@ -55,6 +64,11 @@ model_directory = f"{model_directory}/{architecture_str}"
 FileDirectory().check_directory(model_directory, exit=False)
 
 vae.save_model(model_directory)
+###############################################################################
+# Save reconstructed data
+print("Save reconstructed spectra")
+reconstruction = vae.reconstruct(data)
+np.save(f"{model_directory}/reconstructions.npy", reconstruction)
 ###############################################################################
 tf = time.time()
 print(f"Running time: {tf-ti:.2f}")
