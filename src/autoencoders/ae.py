@@ -144,7 +144,6 @@ class AutoEncoder:
         hyperparameters,
         train_history
         ] = parameters
-        print(train_history)
 
         return [encoder, decoder, architecture, hyperparameters, train_history]
 
@@ -154,19 +153,21 @@ class AutoEncoder:
     ) -> keras.callbacks.History:
 
         stopping_criteria = keras.callbacks.EarlyStopping(
-            monitor="loss",
+            monitor="val_loss",
             patience=self.hyperparameters["early_stop_patience"],
             verbose=1,
-            restore_best_weights = True,
+            mode="min",
         )
         learning_rate_schedule = keras.callbacks.ReduceLROnPlateau(
-            monitor='mse',
+            monitor='val_loss',
             factor=0.1,
             patience=self.hyperparameters["learning_rate_patience"],
             verbose=1,
             min_lr=0,
             mode="min"
         )
+
+        callbacks = [stopping_criteria, learning_rate_schedule]
 
         history = self.model.fit(
             x=spectra,
@@ -177,8 +178,8 @@ class AutoEncoder:
             use_multiprocessing=self.hyperparameters["use_multiprocessing"],
             workers = self.hyperparameters["workers"],
             shuffle=True,
-            callbacks = stopping_criteria,
-
+            callbacks = callbacks,
+            validation_split = self.hyperparameters["validation_split"],
         )
 
         # self.train_history = history
@@ -304,7 +305,10 @@ class AutoEncoder:
             weight_factor=reconstruction_weight,
         )
 
-        self.model.compile(optimizer=optimizer, loss=MSE, metrics=["mse"])
+        self.model.compile(
+            optimizer=optimizer,
+            loss=MSE,
+            metrics=["mse"])
 
     ###########################################################################
     def _build_ae(self):

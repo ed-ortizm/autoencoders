@@ -67,8 +67,11 @@ vae.save_model(model_directory)
 ###############################################################################
 # Save reconstructed data
 print("Save reconstructed spectra")
-reconstruction = vae.reconstruct(data)
-np.save(f"{model_directory}/reconstructions.npy", reconstruction)
+observation_name = parser.get("files", "observation")
+observation = np.load(f"{data_directory}/{observation_name}")
+reconstruction = vae.reconstruct(observation)
+reconstruction_name = parser.get("files", "reconstruction")
+np.save(f"{model_directory}/{reconstruction_name}.npy", reconstruction)
 ###############################################################################
 tf = time.time()
 print(f"Running time: {tf-ti:.2f}")
