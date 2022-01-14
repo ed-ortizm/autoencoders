@@ -265,8 +265,6 @@ class AutoEncoder:
         save_to: str,
     ) -> None:
 
-        save_to = f"{save_to}/{self.architecture['model_name']}"
-
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
         self.model.save(f"{save_to}")

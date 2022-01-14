@@ -55,23 +55,33 @@ print(f"\nThe model has {number_params} parameters", end="\n")
 # Training the model
 print("Train the model")
 vae.train(data)
+del data
 # save model
 architecture_str = architecture["encoder"]\
     + [architecture["latent_dimensions"]] + architecture["decoder"]
 architecture_str = "_".join(str(unit) for unit in architecture_str)
+
 model_directory = parser.get("directories", "output")
 model_directory = f"{model_directory}/{architecture_str}"
-FileDirectory().check_directory(model_directory, exit=False)
 
-vae.save_model(model_directory)
+model_name = f"{architecture['model_name']}"
+model_name += f"_alpha_{hyperparameters['alpha']}"
+model_name += f"_lambda_{hyperparameters['lambda']}"
+
+FileDirectory().check_directory(f"{model_directory}/{model_name}", exit=False)
+
+vae.save_model(f"{model_directory}/{model_name}")
 ###############################################################################
 # Save reconstructed data
-print("Save reconstructed spectra")
+print("Get reconstructed spectra after training...")
 observation_name = parser.get("files", "observation")
 observation = np.load(f"{data_directory}/{observation_name}")
+print("Save reconstructed spectra")
 reconstruction = vae.reconstruct(observation)
-reconstruction_name = parser.get("files", "reconstruction")
-np.save(f"{model_directory}/{reconstruction_name}.npy", reconstruction)
+np.save(
+        f"{model_directory}/reconstructions_{model_name}.npy",
+        reconstruction
+)
 ###############################################################################
 tf = time.time()
 print(f"Running time: {tf-ti:.2f}")
