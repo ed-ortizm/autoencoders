@@ -9,6 +9,7 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 ###############################################################################
 from configparser import ConfigParser, ExtendedInterpolation
+import itertools
 import sys
 import time
 
@@ -24,7 +25,7 @@ ti = time.time()
 ###############################################################################
 config_handler = ConfigurationFile()
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-parser.read("vae.ini")
+parser.read("lambda_search.ini")
 ###############################################################################
 # load data
 print(f"Load data")
@@ -40,53 +41,55 @@ architecture = config_handler.section_to_dictionary(
 architecture["input_dimensions"] = input_dimensions
 
 hyperparameters = config_handler.section_to_dictionary(
-    parser.items("hyperparameters"), value_separators=[]
+    parser.items("hyperparameters"), value_separators=["_"]
 )
 print(hyperparameters)
 ###############################################################################
-print(f"Build AutoEncoder")
+# set grid for hyperparameters
 
-vae = AutoEncoder(architecture, hyperparameters)
-
-number_params = vae.model.count_params()
-print(f"\nThe model has {number_params} parameters", end="\n")
-# vae.summary()
-#############################################################################
-# Training the model
-print("Train the model")
-vae.train(data)
-del data
-# save model
-architecture_str = architecture["encoder"]\
-    + [architecture["latent_dimensions"]] + architecture["decoder"]
-architecture_str = "_".join(str(unit) for unit in architecture_str)
-
-model_directory = parser.get("directories", "output")
-model_directory = f"{model_directory}/{architecture_str}"
-
-model_name = f"{architecture['model_name']}"
-model_name += f"_recw_{hyperparameters['reconstruction_weight']}"
-model_name += f"_alpha_{hyperparameters['alpha']}"
-model_name += f"_lambda_{hyperparameters['lambda']}"
-
-FileDirectory().check_directory(f"{model_directory}/{model_name}", exit=False)
-
-vae.save_model(f"{model_directory}/{model_name}")
-###############################################################################
-# Save reconstructed data
-save_reconstruction = parser.getboolean("files", "save_reconstruction")
-
-if save_reconstruction is True:
-
-    print("Get reconstructed spectra after training...")
-    observation_name = parser.get("files", "observation")
-    observation = np.load(f"{data_directory}/{observation_name}")
-    print("Save reconstructed spectra")
-    reconstruction = vae.reconstruct(observation)
-    np.save(
-        f"{model_directory}/reconstructions_{model_name}.npy",
-        reconstruction
+# portillo2021:
+# Dimensionality Reduction of SDSS Spectra with Variational Autoencoders
+lambdas = np.exp(
+    np.random.uniform(
+        low=1,
+        high=np.log(1e3),
+        size=(hyperparameters["search_lambda"])
     )
+)
+
+reconstruction_weights = np.array(hyperparameters["reconstruction_weights"])
+print(reconstruction_weights)
+hyperparameters_grid = itertools.product(reconstruction_weights, lambdas)
+###############################################################################
+
+    # vae = AutoEncoder(architecture, hyperparameters)
+    #
+    # number_params = vae.model.count_params()
+    # print(f"\nThe model has {number_params} parameters", end="\n")
+    # ###########################################################################
+    # print("Train the model")
+    # vae.train(data)
+    # del data
+    # ###########################################################################
+    # # save model
+    # architecture_str = architecture["encoder"]
+    # architecture_str += [architecture["latent_dimensions"]]
+    # architecture_str += architecture["decoder"]
+    # architecture_str = "_".join(str(unit) for unit in architecture_str)
+    #
+    # model_directory = parser.get("directories", "output")
+    # model_directory = f"{model_directory}/{architecture_str}"
+    #
+    # model_name = f"{architecture['model_name']}"
+    # model_name += f"_alpha_{hyperparameters['alpha']}"
+    # model_name += f"_lambda_{hyperparameters['lambda']}"
+    #
+    # FileDirectory().check_directory(
+    #     f"{model_directory}/{model_name}",
+    #     exit=False
+    # )
+    #
+    # vae.save_model(f"{model_directory}/{model_name}")
 ###############################################################################
 tf = time.time()
 print(f"Running time: {tf-ti:.2f}")

@@ -96,7 +96,7 @@ class AutoEncoder:
             self.decoder,
             self.architecture,
             self.hyperparameters,
-            self.train_history
+            self.history
             ] = self._set_class_instances_from_saved_model(reload_from)
 
             self.architecture["model_name"] = self.model.name
@@ -116,7 +116,7 @@ class AutoEncoder:
             self.original_output = None
 
             # Contains training log
-            self.train_history = {}
+            self.history = None
 
             self._build_model()
 
@@ -157,6 +157,7 @@ class AutoEncoder:
             patience=self.hyperparameters["early_stop_patience"],
             verbose=1,
             mode="min",
+            restore_best_weights=True,
         )
         learning_rate_schedule = keras.callbacks.ReduceLROnPlateau(
             monitor='val_loss',
@@ -182,9 +183,7 @@ class AutoEncoder:
             validation_split = self.hyperparameters["validation_split"],
         )
 
-        # self.train_history = history
-        self.train_history["parameters"] = history.params
-        self.train_history["history"] = history.history
+        self.history = history.history
 
         return history
 
@@ -272,7 +271,7 @@ class AutoEncoder:
         parameters = [
             self.architecture,
             self.hyperparameters,
-            self.train_history
+            self.history
         ]
 
         with open(f"{save_to}/parameters_and_train_history.pkl", "wb") as file:
@@ -320,13 +319,20 @@ class AutoEncoder:
         # Add KLD and MMD here to have a nice print of summary
         # of encoder and decoder submodules :)
         if self.architecture["is_variational"] is True:
+
+            self.model.add_metric(
+                self.KLD, name="KLD", aggregation="mean"
+            )
+
             alpha = self.hyperparameters["alpha"]
-            lambda_ = self.hyperparameters["lambda"]
             KLD = self.KLD * (1 - alpha)
+
+            lambda_ = self.hyperparameters["lambda"]
             MMD = self.hyperparameters["mmd_weight"] * self.MMD
+            self.model.add_metric(MMD, name="MMD", aggregation="mean")
             MMD *= (alpha + lambda_ -1)
-            self.model.add_loss(KLD)
-            self.model.add_loss(MMD)
+
+            self.model.add_loss([KLD, MMD])
 
     ###########################################################################
     def _build_decoder(self):
