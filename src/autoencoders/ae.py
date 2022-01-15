@@ -121,6 +121,22 @@ class AutoEncoder:
             self._build_model()
 
     ###########################################################################
+    def get_architecture_and_model_str_(self) -> str:
+
+        architecture_str = self.architecture["encoder"]
+        architecture_str += [self.architecture["latent_dimensions"]]
+        architecture_str += self.architecture["decoder"]
+        architecture_str = "_".join(str(unit) for unit in architecture_str)
+
+        model_name = (
+            f"{self.architecture['model_name']}"
+            f"_rec_weight_{hyperparameters['reconstruction_weight']}"
+            f"_alpha_{hyperparameters['alpha']}"
+            f"_lambda_{hyperparameters['lambda']}"
+        )
+
+        return [architecture_str, model_name]
+    ###########################################################################
     def _set_class_instances_from_saved_model(self, reload_from: str) -> list:
 
         #######################################################################
@@ -135,7 +151,7 @@ class AutoEncoder:
 
                 decoder = submodule
         #######################################################################
-        file_location = f"{reload_from}/parameters_and_train_history.pkl"
+        file_location = f"{reload_from}/train_history.pkl"
         with open(file_location, "rb") as file:
             parameters = pickle.load(file)
 
@@ -266,7 +282,9 @@ class AutoEncoder:
 
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
-        self.model.save(f"{save_to}")
+        architecture_str, model_name = self.get_architecture_and_model_str_()
+        save_to = f"{save_to}/{architecture_str}/{model_name}"
+        self.model.save(save_to)
         #######################################################################
         parameters = [
             self.architecture,
@@ -274,7 +292,7 @@ class AutoEncoder:
             self.history
         ]
 
-        with open(f"{save_to}/parameters_and_train_history.pkl", "wb") as file:
+        with open(f"{save_to}/train_history.pkl", "wb") as file:
             pickle.dump(parameters, file)
 
     ###########################################################################
