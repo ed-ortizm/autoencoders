@@ -23,48 +23,7 @@ from autoencoders.ae import AutoEncoder, SamplingLayer
 from autoencoders.customObjects import MyCustomLoss
 from sdss.superclasses import ConfigurationFile, FileDirectory
 
-###############################################################################
-def to_numpy_array(array, array_shape):
-    """Create a numpy array backed by a shared memory Array."""
-
-    array = np.ctypeslib.as_array(array)
-
-    return array.reshape(array_shape)
-#######################################################################
-def init_worker(
-    counter: mp.Value,
-    share_data: np.array,
-    data_shape: tuple,
-    share_architecture: dict,
-    share_hyperparameters: dict,
-    share_model_directory: str,
-) -> None:
-    """
-    Initialize worker to train different AEs
-    PARAMETERS
-
-    """
-    global data
-    global architecture
-    global hyperparameters
-    global model_directory
-
-    data = to_numpy_array(share_data, data_shape)
-    architecture = share_architecture
-    hyperparameters = share_hyperparameters
-    model_directory = share_model_directory
-
-#######################################################################
-def worker(lambda_: float, reconstruction_weight: float):
-
-    hyperparameters["lambda"] = lambda_
-    hyperparameters["reconstruction_weight"] = reconstruction_weight
-
-    vae = AutoEncoder(architecture, hyperparameters)
-    print("working")
-    # vae.train(data)
-    vae.save_model(model_directory)
-
+import parallel_hyper_parameters_optimization as hyper_optimize
 ###############################################################################
 if __name__ == "__main__":
 
@@ -96,7 +55,6 @@ if __name__ == "__main__":
     print(hyperparameters)
     ###########################################################################
     # set grid for hyperparameters
-
     # portillo2021:
     # Dimensionality Reduction of SDSS Spectra with Variational Autoencoders
 
@@ -119,21 +77,32 @@ if __name__ == "__main__":
     array_shape = data.shape
     counter = mp.Value("i", 0)
     # RawArray since I just need to read the array
+    #######################################################################
+    if parser.getboolean("code", "test") is True:
+        data = data[:10_000]
+        array_shape = data.shape
+    #######################################################################
     print("Raw array")
-    share_data = RawArray(
+    # share_data = RawArray(
+    raw_data = RawArray(
         np.ctypeslib.as_ctypes_type(data.dtype),
-        data.flatten()
+        data.size
+        # data.flatten()
     )
+
+    share_data = np.frombuffer(raw_data, dtype=data.dtype).reshape()
+    share_data[...] = np.load(f"{data_directory}/{data_name}")
+
+    del data
 
     model_directory = parser.get("directories", "output")
     ###########################################################################
     with mp.Pool(
-        processes=48,
-        initializer=init_worker,
+        processes=10,
+        initializer=hyper_optimize.init_worker,
         initargs=(
             counter,
             share_data,
-            # data,
             array_shape,
             architecture,
             hyperparameters,
@@ -141,17 +110,8 @@ if __name__ == "__main__":
         ),
     ) as pool:
 
-        pool.starmap(worker, lambda_reconstruction_weight_grid)
+        pool.starmap(hyper_optimize.worker, lambda_reconstruction_weight_grid)
 
-        #
-        # model_directory = f"{model_directory}/{architecture_str}"
-        #
-        #
-        # FileDirectory().check_directory(
-        #     f"{model_directory}/{model_name}",
-        #     exit=False
-        # )
-        #
     ###########################################################################
     tf = time.time()
     print(f"Running time: {tf-ti:.2f}")

@@ -11,6 +11,7 @@ from keras.layers import Dense, Layer
 
 ###############################################################################
 from autoencoders.customObjects import MyCustomLoss
+from sdss.superclasses import FileDirectory
 
 ###############################################################################
 # taken from tf tutorias website
@@ -52,7 +53,7 @@ class SamplingLayer(Layer):
 
 
 ###############################################################################
-class AutoEncoder:
+class AutoEncoder(FileDirectory):
     """
     Create an AE model using the keras functional API, where custom
     layers are created by subclassing keras.layers.Layer, the same
@@ -80,6 +81,7 @@ class AutoEncoder:
 
         if reload is True:
 
+            
             self.model = keras.models.load_model(
                 f"{reload_from}",
                 custom_objects={
@@ -130,9 +132,9 @@ class AutoEncoder:
 
         model_name = (
             f"{self.architecture['model_name']}"
-            f"_rec_weight_{hyperparameters['reconstruction_weight']}"
-            f"_alpha_{hyperparameters['alpha']}"
-            f"_lambda_{hyperparameters['lambda']}"
+            f"_rec_weight_{self.hyperparameters['reconstruction_weight']}"
+            f"_alpha_{self.hyperparameters['alpha']}"
+            f"_lambda_{self.hyperparameters['lambda']}"
         )
 
         return [architecture_str, model_name]
@@ -191,7 +193,7 @@ class AutoEncoder:
             y=spectra,
             batch_size=self.hyperparameters["batch_size"],
             epochs=self.hyperparameters["epochs"],
-            verbose=1,  # progress bar
+            verbose=self.architecture["verbose"],  # 1 for progress bar
             use_multiprocessing=self.hyperparameters["use_multiprocessing"],
             workers = self.hyperparameters["workers"],
             shuffle=True,
@@ -283,7 +285,10 @@ class AutoEncoder:
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
         architecture_str, model_name = self.get_architecture_and_model_str_()
+
         save_to = f"{save_to}/{architecture_str}/{model_name}"
+        super().check_directory(save_to, exit=False)
+
         self.model.save(save_to)
         #######################################################################
         parameters = [
