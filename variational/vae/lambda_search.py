@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.8
 import os
+import tensorflow as tf
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -7,6 +8,11 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
+# 0 = all messages are logged (default behavior)
+# 1 = INFO messages are not printed
+# 2 = INFO and WARNING messages are not printed
+# 3 = INFO, WARNING, and ERROR messages are not printed
+os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
 ###############################################################################
 import ctypes
 from configparser import ConfigParser, ExtendedInterpolation
@@ -40,8 +46,14 @@ if __name__ == "__main__":
     print(f"Load data")
     data_directory = parser.get("directories", "train")
     data_name = parser.get("files", "train")
-    data = np.load(f"{data_directory}/{data_name}")
+    data = np.load(f"{data_directory}/{data_name}", mmap_mode='r')
+
     input_dimensions = data.shape[1]
+    array_shape = data.shape
+    array_size = data.size
+    array_dtype = data.dtype
+
+    del data
     ###########################################################################
     architecture = config_handler.section_to_dictionary(
         parser.items("architecture"), value_separators=["_"]
@@ -66,51 +78,39 @@ if __name__ == "__main__":
         )
     )
 
-    reconstruction_weights = np.array(
-        hyperparameters["reconstruction_weights"]
-    )
-
-    lambda_reconstruction_weight_grid = itertools.product(
-        lambdas, reconstruction_weights
-    )
+    hyperparameters["reconstruction_weight"] = input_dimensions
     ###########################################################################
-    array_shape = data.shape
     counter = mp.Value("i", 0)
-    # RawArray since I just need to read the array
-    #######################################################################
-    if parser.getboolean("code", "test") is True:
-        data = data[:10_000]
-        array_shape = data.shape
-    #######################################################################
-    print("Raw array")
-    # share_data = RawArray(
-    raw_data = RawArray(
-        np.ctypeslib.as_ctypes_type(data.dtype),
-        data.size
-        # data.flatten()
+
+    share_data = RawArray(
+        np.ctypeslib.as_ctypes_type(array_dtype),
+        array_size
     )
 
-    share_data = np.frombuffer(raw_data, dtype=data.dtype).reshape()
-    share_data[...] = np.load(f"{data_directory}/{data_name}")
-
-    del data
-
+    #######################################################################
     model_directory = parser.get("directories", "output")
     ###########################################################################
+    # 100 models with 80 k to train and 20 k to validate
+    # 20: 302 [s] ~ 70% of each thread and load of ~70
+    # 25: 267 [s] ~ 80% of each thread and load of ~100
+    # 30: 235 [s] ~ 90% of each thread and load of ~120
+    # 35: 235 [s] ~ 90% of each thread and load of ~130
+    # 48: 260 [s] ~ 100% of each thread and load of ~ 160
     with mp.Pool(
-        processes=10,
+        processes=30,
         initializer=hyper_optimize.init_worker,
         initargs=(
             counter,
             share_data,
             array_shape,
+            f"{data_directory}/{data_name}",
             architecture,
             hyperparameters,
             model_directory,
         ),
     ) as pool:
 
-        pool.starmap(hyper_optimize.worker, lambda_reconstruction_weight_grid)
+        pool.map(hyper_optimize.worker, lambdas)
 
     ###########################################################################
     tf = time.time()

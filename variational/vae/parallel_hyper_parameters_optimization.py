@@ -1,5 +1,6 @@
 import multiprocessing as mp
 from multiprocessing.sharedctypes import RawArray
+import sys
 ###############################################################################
 import numpy as np
 
@@ -16,6 +17,7 @@ def init_worker(
     share_counter: mp.Value,
     share_data: RawArray,
     data_shape: tuple,
+    data_location: str,
     share_architecture: dict,
     share_hyperparameters: dict,
     share_model_directory: str,
@@ -33,21 +35,25 @@ def init_worker(
 
     counter = share_counter
     data = to_numpy_array(share_data, data_shape)
+    data[...] = np.load(data_location)
     architecture = share_architecture
     hyperparameters = share_hyperparameters
     model_directory = share_model_directory
 
 #######################################################################
-def worker(lambda_: float, reconstruction_weight: float):
+def worker(
+    lambda_: float,
+)-> None:
 
     hyperparameters["lambda"] = lambda_
-    hyperparameters["reconstruction_weight"] = reconstruction_weight
+
+
+    with counter.get_lock():
+
+        print(f"Train model N:{counter.value:05d}", end="\r")
+
+        counter.value += 1
 
     vae = AutoEncoder(architecture, hyperparameters)
     vae.train(data)
     vae.save_model(model_directory)
-
-    with counter.get_lock():
-
-        print(f"Finish train model {counter.value}", end="\r")
-        counter.value += 1

@@ -81,7 +81,7 @@ class AutoEncoder(FileDirectory):
 
         if reload is True:
 
-            
+
             self.model = keras.models.load_model(
                 f"{reload_from}",
                 custom_objects={
@@ -351,8 +351,15 @@ class AutoEncoder(FileDirectory):
             KLD = self.KLD * (1 - alpha)
 
             lambda_ = self.hyperparameters["lambda"]
-            MMD = self.hyperparameters["mmd_weight"] * self.MMD
+
+            # portillo2021
+            # https://github.com/ed-ortizm/SDSS-VAE/blob/master/InfoVAE.py
+            mmd_weight = self.hyperparameters["batch_size"]
+            mmd_weight *= self.architecture["latent_dimensions"]
+            MMD =  mmd_weight * self.MMD
+
             self.model.add_metric(MMD, name="MMD", aggregation="mean")
+
             MMD *= (alpha + lambda_ -1)
 
             self.model.add_loss([KLD, MMD])
@@ -412,48 +419,14 @@ class AutoEncoder(FileDirectory):
             )
 
             # Compute MMD
-            batch = tf.shape(z_mean)[0]
 
-            z_prime = keras.backend.random_normal(
-                shape=(batch, self.architecture["latent_dimensions"])
+            # true samples from the prior distribution p(z)
+            # in our case, here we use a gaussian
+            true_samples = tf.random.normal(
+                tf.stack([200, self.architecture["latent_dimensions"]])
             )
 
-            def compute_kernel(x, y):
-
-                batch = tf.shape(x)[0]
-
-                tiled_x = tf.tile(
-                    tf.reshape(
-                        x,
-                        tf.stack([batch, 1, self.architecture["latent_dimensions"]])
-                    ),
-                    tf.stack([1, batch, 1])
-                )
-
-
-                tiled_y = tf.tile(
-                    tf.reshape(
-                        y,
-                        tf.stack([1, batch, self.architecture["latent_dimensions"]])
-                    ),
-                    tf.stack([batch, 1, 1])
-                )
-
-                kernel = tf.exp(
-                    -tf.reduce_mean(
-                        tf.square(tiled_x - tiled_y),
-                        axis=2
-                    ) / tf.cast(self.architecture["latent_dimensions"], tf.float32)
-                )
-
-                return kernel
-
-
-            z_prime_kernel = compute_kernel(z_prime, z_prime)
-            z_prime_z_kernel = compute_kernel(z_prime, z)
-            z_kernel = compute_kernel(z, z)
-
-            self.MMD = tf.reduce_mean(z_prime_kernel) + tf.reduce_mean(z_kernel) - 2 * tf.reduce_mean(z_prime_z_kernel)
+            self.MMD = self.compute_mmd(true_samples, z)
 
         else:
 
@@ -467,6 +440,45 @@ class AutoEncoder(FileDirectory):
 
         self.encoder = keras.Model(encoder_input, z, name="encoder")
 
+    ###########################################################################
+    def _compute_kernel(self, x, y):
+
+        x_size = tf.shape(x)[0]
+        y_size = tf.shape(y)[0]
+        dim = tf.shape(x)[1]
+
+        tiled_x = tf.tile(
+            tf.reshape(x, tf.stack([x_size, 1, dim])),
+            tf.stack([1, y_size, 1])
+        )
+
+        tiled_y = tf.tile(
+            tf.reshape(y, tf.stack([1, y_size, dim])),
+            tf.stack([x_size, 1, 1])
+        )
+
+        kernel = tf.exp(
+            -tf.reduce_mean(
+                tf.square(tiled_x - tiled_y),
+                axis=2
+            ) / tf.cast(dim, tf.float32)
+        )
+
+        return kernel
+    ###########################################################################
+    def compute_mmd(self, x, y):
+
+        x_kernel = compute_kernel(x, x)
+        y_kernel = compute_kernel(y, y)
+        xy_kernel = compute_kernel(x, y)
+
+        mmd = (
+            tf.reduce_mean(x_kernel)
+            + tf.reduce_mean(y_kernel)
+            - 2 * tf.reduce_mean(xy_kernel)
+        )
+
+        return mmd
     ###########################################################################
     def _add_block(self, input_tensor: tf.Tensor, block: str) -> tf.Tensor:
         """
