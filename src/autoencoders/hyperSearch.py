@@ -1,6 +1,8 @@
 # process base parallelism to train models in a grid of hyperparameters
+import itertools
 import multiprocessing as mp
 from multiprocessing.sharedctypes import RawArray
+
 
 import numpy as np
 
@@ -12,7 +14,7 @@ def to_numpy_array(array: RawArray, array_shape: tuple) -> np.array:
     array = np.ctypeslib.as_array(array)
 
     return array.reshape(array_shape)
-#######################################################################
+###############################################################################
 def init_shared_data(
     share_counter: mp.Value,
     share_data: RawArray,
@@ -49,7 +51,7 @@ def init_shared_data(
     hyperparameters = share_hyperparameters
     model_directory = share_model_directory
 
-#######################################################################
+###############################################################################
 def get_and_train_model_worker(
     rec_weight: float,
     mmd_weight: float,
@@ -83,3 +85,35 @@ def get_and_train_model_worker(
     vae = AutoEncoder(architecture, hyperparameters)
     vae.train(data)
     vae.save_model(model_directory)
+###############################################################################
+def get_parameters_grid(
+    rec_weights: list,
+    mmd_weights: list,
+    kld_weights: list,
+    alphas: list,
+    lambdas: list,
+) -> itertools.product:
+    """
+    Returns cartesian product of input
+
+    PARAMETERS
+        rec_weights:
+        mmd_weights:
+        kld_weights:
+        alphas:
+        lambdas:
+
+    OUTPUT
+        parameters_grid: iterable with the cartesian product
+            of input parameters
+    """
+
+    parameters_grid = itertools.product(
+        rec_weights,
+        mmd_weights,
+        kld_weights,
+        alphas,
+        lambdas,
+    )
+
+    return parameters_grid
