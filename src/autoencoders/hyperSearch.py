@@ -52,7 +52,7 @@ def init_shared_data(
     model_directory = share_model_directory
 
 ###############################################################################
-def get_and_train_model_worker(
+def build_and_train_model(
     rec_weight: float,
     mmd_weight: float,
     kld_weight: float,
@@ -78,7 +78,7 @@ def get_and_train_model_worker(
 
     with counter.get_lock():
 
-        print(f"Train model N:{counter.value:05d}", end="\r")
+        print(f"Train uo to model N:{counter.value:05d}", end="\r")
 
         counter.value += 1
 
@@ -86,34 +86,29 @@ def get_and_train_model_worker(
     vae.train(data)
     vae.save_model(model_directory)
 ###############################################################################
-def get_parameters_grid(
-    rec_weights: list,
-    mmd_weights: list,
-    kld_weights: list,
-    alphas: list,
-    lambdas: list,
-) -> itertools.product:
+def get_parameters_grid(hyperparameters: dict) -> itertools.product:
     """
-    Returns cartesian product of input
+    Returns cartesian product of hyperparameters: reconstruction_weight,
+        mmd_weights, kld_weights, alpha and lambda
 
     PARAMETERS
-        rec_weights:
-        mmd_weights:
-        kld_weights:
-        alphas:
-        lambdas:
+        hyperparameters:
 
     OUTPUT
         parameters_grid: iterable with the cartesian product
             of input parameters
     """
+    for key, value in hyperparameters.items():
 
-    parameters_grid = itertools.product(
-        rec_weights,
-        mmd_weights,
-        kld_weights,
-        alphas,
-        lambdas,
+        if type(value) != type([]):
+            hyperparameters[key] = [value]
+
+    grid = itertools.product(
+        hyperparameters["reconstruction_weight"],
+        hyperparameters["mmd_weight"],
+        hyperparameters["kld_weight"],
+        hyperparameters["alpha"],
+        hyperparameters["lambda"],
     )
 
-    return parameters_grid
+    return grid

@@ -29,7 +29,7 @@ from autoencoders.ae import AutoEncoder, SamplingLayer
 from autoencoders.customObjects import MyCustomLoss
 from sdss.superclasses import ConfigurationFile, FileDirectory
 
-import parallel_hyper_parameters_optimization as hyper_optimize
+from autoencoders import hyperSearch
 ###############################################################################
 if __name__ == "__main__":
 
@@ -40,45 +40,51 @@ if __name__ == "__main__":
     ###########################################################################
     config_handler = ConfigurationFile()
     parser = ConfigParser(interpolation=ExtendedInterpolation())
-    parser.read("lambda_search.ini")
-    ###########################################################################
-    # load data
-    print(f"Load data")
-    data_directory = parser.get("directories", "train")
-    data_name = parser.get("files", "train")
-    data = np.load(f"{data_directory}/{data_name}", mmap_mode='r')
-
-    input_dimensions = data.shape[1]
-    array_shape = data.shape
-    array_size = data.size
-    array_dtype = data.dtype
-
-    del data
-    ###########################################################################
+    parser.read("search_hyperparameters.ini")
+    # ###########################################################################
+    # # load data
+    # print(f"Load data")
+    # data_directory = parser.get("directories", "train")
+    # data_name = parser.get("files", "train")
+    # data = np.load(f"{data_directory}/{data_name}", mmap_mode='r')
+    #
+    # input_dimensions = data.shape[1]
+    # array_shape = data.shape
+    # array_size = data.size
+    # array_dtype = data.dtype
+    #
+    # del data
+    # ###########################################################################
     architecture = config_handler.section_to_dictionary(
         parser.items("architecture"), value_separators=["_"]
     )
 
-    architecture["input_dimensions"] = input_dimensions
+    # architecture["input_dimensions"] = input_dimensions
 
     hyperparameters = config_handler.section_to_dictionary(
         parser.items("hyperparameters"), value_separators=["_"]
     )
-    print(hyperparameters)
     ###########################################################################
     # set grid for hyperparameters
     # portillo2021:
     # Dimensionality Reduction of SDSS Spectra with Variational Autoencoders
 
-    lambdas = np.exp(
-        np.random.uniform(
-            low=1,
-            high=np.log(1e3),
-            size=(hyperparameters["search_lambda"])
-        )
+    grid = config_handler.section_to_dictionary(
+        parser.items("param-search"), value_separators=["_"]
     )
+    if grid["lambda"] == "random":
 
-    hyperparameters["reconstruction_weight"] = input_dimensions
+        lambdas = np.exp(
+            np.random.uniform(
+                low=0,
+                high=np.log(1e5),
+                size=(grid["number_lambdas"])
+            )
+        )
+
+        grid["lambda"] = lambdas.tolist()
+
+    grid = hyperSearch.get_parameters_grid(grid)
     ###########################################################################
     counter = mp.Value("i", 0)
 
@@ -90,15 +96,15 @@ if __name__ == "__main__":
     #######################################################################
     model_directory = parser.get("directories", "output")
     ###########################################################################
-    # 100 models with 80 k to train and 20 k to validate
-    # 20: 302 [s] ~ 70% of each thread and load of ~70
-    # 25: 267 [s] ~ 80% of each thread and load of ~100
-    # 30: 235 [s] ~ 90% of each thread and load of ~120
-    # 35: 235 [s] ~ 90% of each thread and load of ~130
-    # 48: 260 [s] ~ 100% of each thread and load of ~ 160
+    # # 100 models with 80 k to train and 20 k to validate
+    # # 20: 302 [s] ~ 70% of each thread and load of ~70
+    # # 25: 267 [s] ~ 80% of each thread and load of ~100
+    # # 30: 235 [s] ~ 90% of each thread and load of ~120
+    # # 35: 235 [s] ~ 90% of each thread and load of ~130
+    # # 48: 260 [s] ~ 100% of each thread and load of ~ 160
     with mp.Pool(
         processes=30,
-        initializer=hyper_optimize.init_worker,
+        initializer=hyperSearch.init_shared_data,
         initargs=(
             counter,
             share_data,
@@ -110,7 +116,7 @@ if __name__ == "__main__":
         ),
     ) as pool:
 
-        pool.map(hyper_optimize.worker, lambdas)
+        pool.starmap(hyperSearch.build_and_train_model, grid)
 
     ###########################################################################
     tf = time.time()
