@@ -343,23 +343,19 @@ class AutoEncoder(FileDirectory):
         # of encoder and decoder submodules :)
         if self.architecture["is_variational"] is True:
 
-            self.model.add_metric(
-                self.KLD, name="KLD", aggregation="mean"
-            )
+            # metrics without weights to chec for correlations
+            self.model.add_metric(self.KLD, name="KLD", aggregation="mean")
+            self.model.add_metric(self.MMD, name="MMD", aggregation="mean")
 
+            # prepare KLD for loss
+            kld_weight = self.hyperparameters["kld_weight"]
             alpha = self.hyperparameters["alpha"]
             KLD = self.KLD * (1 - alpha)
 
-            lambda_ = self.hyperparameters["lambda"]
-
-            # portillo2021
-            # https://github.com/ed-ortizm/SDSS-VAE/blob/master/InfoVAE.py
-            mmd_weight = self.hyperparameters["batch_size"]
-            mmd_weight *= self.architecture["latent_dimensions"]
+            # prepare MMD for loss
+            mmd_weight = self.hyperparameters["mmd_weight"]
             MMD =  mmd_weight * self.MMD
-
-            self.model.add_metric(MMD, name="MMD", aggregation="mean")
-
+            lambda_ = self.hyperparameters["lambda"]
             MMD *= (alpha + lambda_ -1)
 
             self.model.add_loss([KLD, MMD])
@@ -411,15 +407,12 @@ class AutoEncoder(FileDirectory):
 
             z, z_mean, z_log_var = self._sampling_layer(block_output)
 
-            # To add later on to the model before compiling
-
             # Compute KLD
             self.KLD = -0.5 * tf.reduce_mean(
                 z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1
             )
 
             # Compute MMD
-
             # true samples from the prior distribution p(z)
             # in our case, here we use a gaussian
             true_samples = tf.random.normal(
