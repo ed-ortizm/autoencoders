@@ -23,6 +23,7 @@ def init_shared_data(
     share_architecture: dict,
     share_hyperparameters: dict,
     share_model_directory: str,
+    share_cores_per_worker: int,
 ) -> None:
     """
     Initialize worker to train different AEs
@@ -43,6 +44,7 @@ def init_shared_data(
     global architecture
     global hyperparameters
     global model_directory
+    global cores_per_worker
 
     counter = share_counter
     data = to_numpy_array(share_data, data_shape)
@@ -50,6 +52,7 @@ def init_shared_data(
     architecture = share_architecture
     hyperparameters = share_hyperparameters
     model_directory = share_model_directory
+    cores_per_worker = share_cores_per_worker
 
 ###############################################################################
 def build_and_train_model(
@@ -70,25 +73,24 @@ def build_and_train_model(
 
     """
     ###########################################################################
-    from tensorflow import keras.backed as  K
     import tensorflow as tf
+    from tensorflow import keras
     from autoencoders.ae import AutoEncoder
 
     # set the number of cores to use per model in each worker
-    jobs = 4
-    config = tf.ConfigProto(
+    jobs = cores_per_worker
+    config = tf.compat.v1.ConfigProto(
         intra_op_parallelism_threads=jobs,
         inter_op_parallelism_threads=jobs,
         allow_soft_placement=True,
         device_count={'CPU': jobs}
     )
-    session = tf.Session(config=config)
-    K.set_session(session)
+    session = tf.compat.v1.Session(config=config)
     ###########################################################################
     hyperparameters["reconstruction_weight"] = rec_weight
     hyperparameters["mmd_weight"] = mmd_weight
     hyperparameters["kld_weight"] = kld_weight
-    hyperparameters["alpha"] = kld_weight
+    hyperparameters["alpha"] = alpha
     hyperparameters["lambda"] = lambda_
 
 
@@ -101,6 +103,10 @@ def build_and_train_model(
     vae = AutoEncoder(architecture, hyperparameters)
     vae.train(data)
     vae.save_model(model_directory)
+    
+    print("Finish model training", end="\n")
+
+    session.close()
 ###############################################################################
 def get_parameters_grid(hyperparameters: dict) -> itertools.product:
     """

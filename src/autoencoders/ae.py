@@ -123,7 +123,7 @@ class AutoEncoder(FileDirectory):
             self._build_model()
 
     ###########################################################################
-    def get_architecture_and_model_str_(self) -> str:
+    def get_architecture_and_model_str(self) -> str:
 
         architecture_str = self.architecture["encoder"]
         architecture_str += [self.architecture["latent_dimensions"]]
@@ -132,9 +132,11 @@ class AutoEncoder(FileDirectory):
 
         model_name = (
             f"{self.architecture['model_name']}"
-            f"_rec_weight_{self.hyperparameters['reconstruction_weight']}"
-            f"_alpha_{self.hyperparameters['alpha']}"
-            f"_lambda_{self.hyperparameters['lambda']}"
+            f"_rec_{self.hyperparameters['reconstruction_weight']:.2f}"
+            f"_kld_{self.hyperparameters['kld_weight']:.2f}"
+            f"_mmd_{self.hyperparameters['mmd_weight']:.2f}"
+            f"_alpha_{self.hyperparameters['alpha']:.2f}"
+            f"_lambda_{self.hyperparameters['lambda']:.2f}"
         )
 
         return [architecture_str, model_name]
@@ -284,7 +286,7 @@ class AutoEncoder(FileDirectory):
 
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
-        architecture_str, model_name = self.get_architecture_and_model_str_()
+        architecture_str, model_name = self.get_architecture_and_model_str()
 
         save_to = f"{save_to}/{architecture_str}/{model_name}"
         super().check_directory(save_to, exit=False)

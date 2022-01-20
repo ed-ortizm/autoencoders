@@ -8,18 +8,6 @@ os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 ###############################################################################
-# from tensorflow import keras.backed as  K
-# import tensorflow as tf
-# jobs = 4 # number of cores
-# config = tf.ConfigProto(
-#     intra_op_parallelism_threads=jobs,
-#     inter_op_parallelism_threads=jobs,
-#     allow_soft_placement=True,
-#     device_count={'CPU': jobs}
-# )
-# session = tf.Session(config=config)
-# K.set_session(session)
-###############################################################################
 # Set TensorFlow print of log information
 # 0 = all messages are logged (default behavior)
 # 1 = INFO messages are not printed
@@ -38,15 +26,12 @@ import time
 ###############################################################################
 import numpy as np
 
-from autoencoders.ae import AutoEncoder, SamplingLayer
-from autoencoders.customObjects import MyCustomLoss
 from sdss.superclasses import ConfigurationFile, FileDirectory
-
 from autoencoders import hyperSearch
 ###############################################################################
 if __name__ == "__main__":
 
-    mp.set_start_method("spawn")
+    mp.set_start_method("spawn", force=True)
 
     ###########################################################################
     ti = time.time()
@@ -115,8 +100,10 @@ if __name__ == "__main__":
     # # 30: 235 [s] ~ 90% of each thread and load of ~120
     # # 35: 235 [s] ~ 90% of each thread and load of ~130
     # # 48: 260 [s] ~ 100% of each thread and load of ~ 160
+    number_processes = parser.getint("configuration", "number_processes")
+    cores_per_worker = parser.getint("configuration", "cores_per_worker")
     with mp.Pool(
-        processes=10,
+        processes=number_processes,
         initializer=hyperSearch.init_shared_data,
         initargs=(
             counter,
@@ -126,6 +113,7 @@ if __name__ == "__main__":
             architecture,
             hyperparameters,
             model_directory,
+            cores_per_worker,
         ),
     ) as pool:
 
