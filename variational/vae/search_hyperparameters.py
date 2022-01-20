@@ -1,18 +1,5 @@
 #!/usr/bin/env python3.8
 import os
-from tensorflow import keras.backed as  K
-import tensorflow as tf
-###############################################################################
-jobs = 4 # number of cores
-config = tf.ConfigProto(
-    intra_op_parallelism_threads=jobs,
-    inter_op_parallelism_threads=jobs,
-    allow_soft_placement=True,
-    device_count={'CPU': jobs}
-)
-session = tf.Session(config=config)
-K.set_session(session)
-###############################################################################
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -20,6 +7,20 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
+###############################################################################
+# from tensorflow import keras.backed as  K
+# import tensorflow as tf
+# jobs = 4 # number of cores
+# config = tf.ConfigProto(
+#     intra_op_parallelism_threads=jobs,
+#     inter_op_parallelism_threads=jobs,
+#     allow_soft_placement=True,
+#     device_count={'CPU': jobs}
+# )
+# session = tf.Session(config=config)
+# K.set_session(session)
+###############################################################################
+# Set TensorFlow print of log information
 # 0 = all messages are logged (default behavior)
 # 1 = INFO messages are not printed
 # 2 = INFO and WARNING messages are not printed
@@ -131,5 +132,5 @@ if __name__ == "__main__":
         pool.starmap(hyperSearch.build_and_train_model, grid)
 
     ###########################################################################
-    tf = time.time()
-    print(f"Running time: {tf-ti:.2f}")
+    time_f = time.time()
+    print(f"Running time: {time_f-ti:.2f}")

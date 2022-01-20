@@ -6,7 +6,7 @@ from multiprocessing.sharedctypes import RawArray
 
 import numpy as np
 
-from autoencoders.ae import AutoEncoder
+# from autoencoders.ae import AutoEncoder
 ###############################################################################
 def to_numpy_array(array: RawArray, array_shape: tuple) -> np.array:
     """Create a numpy array backed by a shared memory Array."""
@@ -69,6 +69,22 @@ def build_and_train_model(
         lambda_:
 
     """
+    ###########################################################################
+    from tensorflow import keras.backed as  K
+    import tensorflow as tf
+    from autoencoders.ae import AutoEncoder
+
+    # set the number of cores to use per model in each worker
+    jobs = 4
+    config = tf.ConfigProto(
+        intra_op_parallelism_threads=jobs,
+        inter_op_parallelism_threads=jobs,
+        allow_soft_placement=True,
+        device_count={'CPU': jobs}
+    )
+    session = tf.Session(config=config)
+    K.set_session(session)
+    ###########################################################################
     hyperparameters["reconstruction_weight"] = rec_weight
     hyperparameters["mmd_weight"] = mmd_weight
     hyperparameters["kld_weight"] = kld_weight
