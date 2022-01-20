@@ -434,7 +434,7 @@ class AutoEncoder(FileDirectory):
         self.encoder = keras.Model(encoder_input, z, name="encoder")
 
     ###########################################################################
-    def _compute_kernel(self, x, y):
+    def compute_kernel(self, x, y):
 
         x_size = tf.shape(x)[0]
         y_size = tf.shape(y)[0]
@@ -461,9 +461,9 @@ class AutoEncoder(FileDirectory):
     ###########################################################################
     def compute_mmd(self, x, y):
 
-        x_kernel = compute_kernel(x, x)
-        y_kernel = compute_kernel(y, y)
-        xy_kernel = compute_kernel(x, y)
+        x_kernel = self.compute_kernel(x, x)
+        y_kernel = self.compute_kernel(y, y)
+        xy_kernel = self.compute_kernel(x, y)
 
         mmd = (
             tf.reduce_mean(x_kernel)

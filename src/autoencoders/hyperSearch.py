@@ -78,7 +78,7 @@ def build_and_train_model(
 
     with counter.get_lock():
 
-        print(f"Train uo to model N:{counter.value:05d}", end="\r")
+        print(f"Train up to model N:{counter.value:05d}", end="\r")
 
         counter.value += 1
 

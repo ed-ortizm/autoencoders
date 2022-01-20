@@ -1,6 +1,18 @@
 #!/usr/bin/env python3.8
 import os
+from tensorflow import keras.backed as  K
 import tensorflow as tf
+###############################################################################
+jobs = 4 # number of cores
+config = tf.ConfigProto(
+    intra_op_parallelism_threads=jobs,
+    inter_op_parallelism_threads=jobs,
+    allow_soft_placement=True,
+    device_count={'CPU': jobs}
+)
+session = tf.Session(config=config)
+K.set_session(session)
+###############################################################################
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -41,25 +53,25 @@ if __name__ == "__main__":
     config_handler = ConfigurationFile()
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read("search_hyperparameters.ini")
-    # ###########################################################################
-    # # load data
-    # print(f"Load data")
-    # data_directory = parser.get("directories", "train")
-    # data_name = parser.get("files", "train")
-    # data = np.load(f"{data_directory}/{data_name}", mmap_mode='r')
-    #
-    # input_dimensions = data.shape[1]
-    # array_shape = data.shape
-    # array_size = data.size
-    # array_dtype = data.dtype
-    #
-    # del data
-    # ###########################################################################
+    ###########################################################################
+    # load data
+    print(f"Load data")
+    data_directory = parser.get("directories", "train")
+    data_name = parser.get("files", "train")
+    data = np.load(f"{data_directory}/{data_name}", mmap_mode='r')
+
+    input_dimensions = data.shape[1]
+    array_shape = data.shape
+    array_size = data.size
+    array_dtype = data.dtype
+
+    del data
+    ###########################################################################
     architecture = config_handler.section_to_dictionary(
         parser.items("architecture"), value_separators=["_"]
     )
 
-    # architecture["input_dimensions"] = input_dimensions
+    architecture["input_dimensions"] = input_dimensions
 
     hyperparameters = config_handler.section_to_dictionary(
         parser.items("hyperparameters"), value_separators=["_"]
@@ -103,7 +115,7 @@ if __name__ == "__main__":
     # # 35: 235 [s] ~ 90% of each thread and load of ~130
     # # 48: 260 [s] ~ 100% of each thread and load of ~ 160
     with mp.Pool(
-        processes=30,
+        processes=10,
         initializer=hyperSearch.init_shared_data,
         initargs=(
             counter,
