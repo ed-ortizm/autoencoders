@@ -63,10 +63,7 @@ if __name__ == "__main__":
         parser.items("hyperparameters"), value_separators=["_"]
     )
     ###########################################################################
-    # set grid for hyperparameters
-    # portillo2021:
-    # Dimensionality Reduction of SDSS Spectra with Variational Autoencoders
-
+    print(f"Get hyperparameters grid", end="\n")
     grid = config_handler.section_to_dictionary(
         parser.items("param-search"), value_separators=["_"]
     )
