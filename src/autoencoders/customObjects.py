@@ -2,22 +2,42 @@ import tensorflow as tf
 from tensorflow import keras
 
 ###############################################################################
-class MyCustomMetric(keras.metrics.Metric):
-    def __init__(self, name="my_custom_metric", **kwargs):
-        super(MyCustomMetric, self).__init__(name=name, **kwargs)
-        pass
+# taken from tf tutorias website
+class SamplingLayer(keras.layers.Layer):
+    """
+    Uses (z_mean, z_log_variance) to sample z, the latent vector.
+    And compute kl_divergence
+    """
 
-    def update_state(self, y_true, y_pred, sample_weight=None):
-        # return
-        pass
+    ###########################################################################
+    def __init__(self, name: str = "sampleLayer"):
 
-    def result(self):
-        pass
+        super(SamplingLayer, self).__init__(name=name)
 
-    def reset_state(self):
-        # The state of the metric will be reset at the start of each epoch.
-        pass
+    ###########################################################################
+    def call(self, inputs):
 
+        z_mean, z_log_var = inputs
+
+        batch = tf.shape(z_mean)[0]
+        dim = tf.shape(z_mean)[1]
+        epsilon = keras.backend.random_normal(shape=(batch, dim))
+
+        z = keras.backend.exp(0.5 * z_log_var) * epsilon
+        z += z_mean
+
+        return z
+
+    ###########################################################################
+    def get_config(self):
+
+        return {"name": self.name}
+
+    ###########################################################################
+    # necessary to serialize the custom loss
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
 
 ###############################################################################
 class MyCustomLoss(keras.losses.Loss):
@@ -65,3 +85,21 @@ class MyCustomLoss(keras.losses.Loss):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
+###############################################################################
+# class MyCustomMetric(keras.metrics.Metric):
+#     def __init__(self, name: str="customMetric", **kwargs):
+#         super(MyCustomMetric, self).__init__(name=name, **kwargs)
+#         pass
+#
+#     def update_state(self, y_true: np.array, y_pred:np.array, sample_weight: float=None):
+#         # return
+#         pass
+#
+#     def result(self):
+#         pass
+#
+#     def reset_state(self):
+#         # The state of the metric will be reset at the start of each epoch.
+#         pass
+###############################################################################

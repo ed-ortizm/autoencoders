@@ -7,50 +7,11 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow import keras
-from keras.layers import Dense, Layer
+from keras.layers import Dense
 
 ###############################################################################
-from autoencoders.customObjects import MyCustomLoss
+from autoencoders.customObjects import MyCustomLoss, SamplingLayer
 from sdss.superclasses import FileDirectory
-
-###############################################################################
-# taken from tf tutorias website
-class SamplingLayer(Layer):
-    """
-    Uses (z_mean, z_log_variance) to sample z, the latent vector.
-    And compute kl_divergence
-    """
-
-    ###########################################################################
-    def __init__(self, name: str = "sampling_layer"):
-
-        super(SamplingLayer, self).__init__(name=name)
-
-    ###########################################################################
-    def call(self, inputs):
-
-        z_mean, z_log_var = inputs
-
-        batch = tf.shape(z_mean)[0]
-        dim = tf.shape(z_mean)[1]
-        epsilon = keras.backend.random_normal(shape=(batch, dim))
-
-        z = keras.backend.exp(0.5 * z_log_var) * epsilon
-        z += z_mean
-
-        return z
-
-    ###########################################################################
-    def get_config(self):
-
-        return {"name": self.name}
-
-    ###########################################################################
-    # necessary to serialize the custom loss
-    @classmethod
-    def from_config(cls, config):
-        return cls(**config)
-
 
 ###############################################################################
 class AutoEncoder(FileDirectory):
