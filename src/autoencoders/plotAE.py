@@ -27,41 +27,61 @@ def plotHistory(
     kld, validation_kld,
     mmd, validation_mmd
     ] = [
-    train_history["loss"], train_history["validation_loss"],
+    train_history["loss"], train_history["val_loss"],
     train_history["mse"], train_history["val_mse"],
     train_history["KLD"], train_history["val_KLD"],
-    train_history["MMD"], train_history["valMMD"]
+    train_history["MMD"], train_history["val_MMD"]
     ]
 
     epochs = [i+1 for i in range(len(loss))]
 
     ###########################################################################
-    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 5), sharex=True)
+    fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(8, 5), sharex=True)
 
+
+    axs[0, 0].text(
+        .8, .8,
+        "loss",
+        horizontalalignment="center",
+        verticalalignment="center",
+        transform=axs[0, 0].transAxes
+    )
     axs[0, 0].plot(epochs, loss, label="loss")
-    axs[0, 0].plot(epoch, validation_loss, label="val loss")
 
-    axs[0, 1].plot(epoch, mse, label="mse")
-    axs[0, 1].plot(epoch, validation_mse, label="val MSE")
+    axs[0, 1].text(
+        .8, .8,
+        "val loss",
+        horizontalalignment="center",
+        verticalalignment="center",
+        transform=axs[0, 1].transAxes
+    )
+    axs[0, 1].plot(epochs, validation_loss, label="val loss")
 
-    axs[1, 0].plot(epoch, kld, label="kld")
-    axs[1, 0].plot(epoch, validation_kld, label="val KLD")
-    
-    axs[1, 1].plot(epoch, mmd, label="MMD")
-    axs[1, 1].plot(epoch, validation_mmd, label="val MMD")
+    axs[1, 0].plot(epochs, mse, label="mse")
+    axs[1, 1].plot(epochs, validation_mse, label="val MSE")
 
-    axs[:::].set_xlabel(f"epochs")
+    axs[2, 0].plot(epochs, kld, label="kld")
+    axs[2, 1].plot(epochs, validation_kld, label="val KLD")
+
+    axs[3, 0].plot(epochs, mmd, label="MMD")
+    axs[3, 1].plot(epochs, validation_mmd, label="val MMD")
+
+    # for ax in axs.reshape(-1):
+        # ax.legend()
+
+    # axs[:::].set_xlabel(f"epochs")
 
     ###########################################################################
     plot_title = (
-    f"$\alpha$: {hyperparameters['']}, \t \t"
-    f"$\lambda$: {hyperparameters['']} \n"
-    f"L = $\alpha$ * MSE + KLD + ($\lamda -1$) MMD"
+    f"{hyperparameters['reconstruction_weight']:02.1f}"
+    f"{hyperparameters['lambda']:02.1f}"
+    # f"L = $\alpha$ * MSE + KLD + ($\lambda -1$) MMD"
     )
-    ###########################################################################
-    fig.savefig(f"{save_to}.pdf")
 
-    plt.close()
+    ###########################################################################
+    # fig.savefig(f"{save_to}.pdf")
+
+    # plt.close()
 
     # if loss is True:
     #     loss = train_history["loss"]
@@ -87,8 +107,4 @@ def plotHistory(
     # if validation_mmd is True:
     #     validation_mmd = train_history["validation_mmd"]
 
-
-
-    reconstruction = np.array(train_history["history"]["mse"])
-    kl_divergence = (loss - reconstruction) / kl_weight
 ###############################################################################
