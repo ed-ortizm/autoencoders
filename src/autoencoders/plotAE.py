@@ -3,56 +3,92 @@ import numpy as np
 
 ###############################################################################
 
+###############################################################################
+def plotHistory(
+    train_history: dict,
+    hyperparameters: dict,
+    m: int = 0,
+    n: int = -1,
+    loss: bool = False,
+    validation_loss: bool = False,
+    mse: bool = False,
+    validation_mse: bool = False,
+    kld: bool = False,
+    validation_kld: bool = False,
+    mmd: bool = False,
+    validation_mmd: bool = False,
 
-def plot_train_history(train_history: dict, kl_weight: np.float, save_to: str):
+)-> None:
 
-    """
-    Plot loss, regularization and reconstruction
+    ###########################################################################
+    [
+    loss, validation_loss,
+    mse, validation_mse,
+    kld, validation_kld,
+    mmd, validation_mmd
+    ] = [
+    train_history["loss"], train_history["validation_loss"],
+    train_history["mse"], train_history["val_mse"],
+    train_history["KLD"], train_history["val_KLD"],
+    train_history["MMD"], train_history["valMMD"]
+    ]
 
-    PARAMETERS
-        train_history: {
+    epochs = [i+1 for i in range(len(loss))]
 
-        "parameters": {
-                'batch_size': 256,
-                'epochs': 10,
-                'steps': None,
-                'samples': 328479,
-                'verbose': 1,
-                'do_validation': False,
-                'metrics': ['loss', 'mse']
-            }
+    ###########################################################################
+    fig, axs = plt.subplots(nrows=2, ncols=2, figsize=(10, 5), sharex=True)
 
-        "history": {
-            'loss': [0.39, ..., 0.12339567896077754],
-            'mse': [0.38579124, ..., 0.11851482]
-            }
-            this key contains the loss function during training,
-            the other metrics shown, correspond to the ones used
-            to monitor the training
-            # Add custom metrics to show the rest of parameters
+    axs[0, 0].plot(epochs, loss, label="loss")
+    axs[0, 0].plot(epoch, validation_loss, label="val loss")
 
-        }
+    axs[0, 1].plot(epoch, mse, label="mse")
+    axs[0, 1].plot(epoch, validation_mse, label="val MSE")
 
-    """
+    axs[1, 0].plot(epoch, kld, label="kld")
+    axs[1, 0].plot(epoch, validation_kld, label="val KLD")
+    
+    axs[1, 1].plot(epoch, mmd, label="MMD")
+    axs[1, 1].plot(epoch, validation_mmd, label="val MMD")
 
-    loss = np.array(train_history["history"]["loss"])
-    reconstruction = np.array(train_history["history"]["mse"])
-    kl_divergence = (loss - reconstruction) / kl_weight
+    axs[:::].set_xlabel(f"epochs")
 
-    fig, axs = plt.subplots(nrows=2, ncols=1, figsize=(8, 5), sharex=True)
-
-    axs[0].plot(loss, label="loss")
-    axs[0].plot(reconstruction, label="MSE")
-    axs[0].legend()
-
-    axs[1].plot(kl_divergence, label="KL-divergence")
-    axs[1].legend()
-
-    axs[1].set_xlabel(f"epochs")
-
+    ###########################################################################
+    plot_title = (
+    f"$\alpha$: {hyperparameters['']}, \t \t"
+    f"$\lambda$: {hyperparameters['']} \n"
+    f"L = $\alpha$ * MSE + KLD + ($\lamda -1$) MMD"
+    )
+    ###########################################################################
     fig.savefig(f"{save_to}.pdf")
 
     plt.close()
 
+    # if loss is True:
+    #     loss = train_history["loss"]
+    #
+    # if validation_loss is True:
+    #     validation_loss = train_history["validation_loss"]
+    #
+    # if mse is True:
+    #     mse = train_history["mse"]
+    #
+    # if validation_mse is True:
+    #     validation_mse = train_history["validation_mse"]
+    #
+    # if kld is True:
+    #     kld = train_history["kld"]
+    #
+    # if validation_kld is True:
+    #     validation_kld = train_history["validation_kld"]
+    #
+    # if mmd is True:
+    #     mmd = train_history["mmd"]
+    #
+    # if validation_mmd is True:
+    #     validation_mmd = train_history["validation_mmd"]
 
+
+
+    reconstruction = np.array(train_history["history"]["mse"])
+    kl_divergence = (loss - reconstruction) / kl_weight
 ###############################################################################
