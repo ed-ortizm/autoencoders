@@ -6,6 +6,7 @@
 # Heavy data
 *.csv
 *.txt
+img/*
 models/*
 data/*
 !requirements.txt
