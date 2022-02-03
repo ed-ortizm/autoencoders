@@ -17,12 +17,15 @@ def ax_tex(ax, x, y, text):
     )
     # return ax
 ###############################################################################
+# def slice_list(full_list, start_slice_at):
+#     return
+###############################################################################
 def visual_train_history(
     train_history: dict,
     hyperparameters: dict,
     figsize: tuple =(10, 10),
-    # m: int = 0,
-    # n: int = -1,
+    # slice_epochs: bool = False,
+    slice_from: int = 0,
     save_to: str=".",
     save_format: str="png"
 )-> None:
@@ -34,13 +37,13 @@ def visual_train_history(
     kld, validation_kld,
     mmd, validation_mmd
     ] = [
-    train_history["loss"], train_history["val_loss"],
-    train_history["mse"], train_history["val_mse"],
-    train_history["KLD"], train_history["val_KLD"],
-    train_history["MMD"], train_history["val_MMD"]
+    train_history["loss"][slice_from:], train_history["val_loss"][slice_from:],
+    train_history["mse"][slice_from:], train_history["val_mse"][slice_from:],
+    train_history["KLD"][slice_from:], train_history["val_KLD"][slice_from:],
+    train_history["MMD"][slice_from:], train_history["val_MMD"][slice_from:]
     ]
 
-    epochs = [i+1 for i in range(len(loss))]
+    epochs = [i+1 for i in range(len(loss)+slice_from)][slice_from:]
 
     ###########################################################################
     fig, axs = plt.subplots(
@@ -101,9 +104,11 @@ def visual_train_history(
     FileDirectory().check_directory(save_to, exit=False)
 
     file_name = (
-        f"ae_MSE_{hyperparameters['reconstruction_weight']:1d}"
+        f"ae_MSE_{hyperparameters['reconstruction_weight']:1d}_"
         f"MMD_{hyperparameters['lambda'] -1:1.0f}"
     )
 
     fig.savefig(f"{save_to}/{file_name}.{save_format}")
+
+    plt.close()
 ###############################################################################
