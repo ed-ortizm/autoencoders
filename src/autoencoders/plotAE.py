@@ -1,8 +1,20 @@
 import matplotlib.pyplot as plt
+from matplotlib import ticker
 import numpy as np
 
 ###############################################################################
 
+###############################################################################
+def ax_tex(ax, x, y, text):
+
+    ax.text(
+        x, y,
+        text,
+        horizontalalignment="center",
+        verticalalignment="center",
+        transform=ax.transAxes
+    )
+    # return ax
 ###############################################################################
 def plotHistory(
     train_history: dict,
@@ -36,41 +48,60 @@ def plotHistory(
     epochs = [i+1 for i in range(len(loss))]
 
     ###########################################################################
-    fig, axs = plt.subplots(nrows=4, ncols=2, figsize=(8, 5), sharex=True)
-
-
-    axs[0, 0].text(
-        .8, .8,
-        "loss",
-        horizontalalignment="center",
-        verticalalignment="center",
-        transform=axs[0, 0].transAxes
+    fig, axs = plt.subplots(
+        nrows=4,
+        ncols=2,
+        figsize=(8, 5),
+        sharex=True,
+        sharey="row",
+        gridspec_kw={
+            # "wspace":.5,
+            "hspace":.5
+        }
     )
+
+
+    ###########################################################################
+    axs[0, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    ax_tex(axs[0, 0], x=0.5, y=0.8, text="loss")
     axs[0, 0].plot(epochs, loss, label="loss")
 
-    axs[0, 1].text(
-        .8, .8,
-        "val loss",
-        horizontalalignment="center",
-        verticalalignment="center",
-        transform=axs[0, 1].transAxes
-    )
+    ax_tex(axs[0, 1], x=0.5, y=0.8, text="val loss")
     axs[0, 1].plot(epochs, validation_loss, label="val loss")
 
-    axs[1, 0].plot(epochs, mse, label="mse")
+    ###########################################################################
+    axs[1, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    ax_tex(axs[1, 0], x=0.5, y=0.8,
+        text=f"MSE: {hyperparameters['reconstruction_weight']:2d}")
+    axs[1, 0].plot(epochs, mse, label="MSE")
+
+    ax_tex(axs[1, 1], x=0.5, y=0.8, text="val MSE")
     axs[1, 1].plot(epochs, validation_mse, label="val MSE")
 
-    axs[2, 0].plot(epochs, kld, label="kld")
+    ###########################################################################
+    axs[2, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    ax_tex(axs[2, 0], x=0.5, y=0.8, text=f"KLD")
+    axs[2, 0].plot(epochs, kld, label="KLD")
+
+    ax_tex(axs[2, 1], x=0.5, y=0.8, text="val KLD")
     axs[2, 1].plot(epochs, validation_kld, label="val KLD")
 
+    ###########################################################################
+    axs[3, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    ax_tex(axs[3, 0], x=0.5, y=0.8,
+        text=f"MMD: {hyperparameters['lambda'] -1:1.0f}")
     axs[3, 0].plot(epochs, mmd, label="MMD")
+
+    ax_tex(axs[3, 1], x=0.5, y=0.8, text="val MMD")
     axs[3, 1].plot(epochs, validation_mmd, label="val MMD")
 
-    # for ax in axs.reshape(-1):
-        # ax.legend()
-
-    # axs[:::].set_xlabel(f"epochs")
-
+    ###########################################################################
+    axs[3, 0].set_xlabel("Epochs")
+    axs[3, 1].set_xlabel("Epochs")
     ###########################################################################
     plot_title = (
     f"{hyperparameters['reconstruction_weight']:02.1f}"
@@ -79,32 +110,5 @@ def plotHistory(
     )
 
     ###########################################################################
-    # fig.savefig(f"{save_to}.pdf")
-
-    # plt.close()
-
-    # if loss is True:
-    #     loss = train_history["loss"]
-    #
-    # if validation_loss is True:
-    #     validation_loss = train_history["validation_loss"]
-    #
-    # if mse is True:
-    #     mse = train_history["mse"]
-    #
-    # if validation_mse is True:
-    #     validation_mse = train_history["validation_mse"]
-    #
-    # if kld is True:
-    #     kld = train_history["kld"]
-    #
-    # if validation_kld is True:
-    #     validation_kld = train_history["validation_kld"]
-    #
-    # if mmd is True:
-    #     mmd = train_history["mmd"]
-    #
-    # if validation_mmd is True:
-    #     validation_mmd = train_history["validation_mmd"]
 
 ###############################################################################
