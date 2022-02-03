@@ -20,9 +20,10 @@ def ax_tex(ax, x, y, text):
 def visual_train_history(
     train_history: dict,
     hyperparameters: dict,
+    figsize: tuple =(10, 10),
     # m: int = 0,
     # n: int = -1,
-    save_to: str,
+    save_to: str=".",
     save_format: str="png"
 )-> None:
 
@@ -45,7 +46,7 @@ def visual_train_history(
     fig, axs = plt.subplots(
         nrows=4,
         ncols=2,
-        figsize=(20, 10),
+        figsize=figsize,
         sharex=True,
         sharey="row",
         gridspec_kw={
