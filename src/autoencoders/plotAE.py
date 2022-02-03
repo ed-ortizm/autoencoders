@@ -2,6 +2,7 @@ import matplotlib.pyplot as plt
 from matplotlib import ticker
 import numpy as np
 
+from sdss.superclasses import FileDirectory
 ###############################################################################
 
 ###############################################################################
@@ -16,20 +17,13 @@ def ax_tex(ax, x, y, text):
     )
     # return ax
 ###############################################################################
-def plotHistory(
+def visual_train_history(
     train_history: dict,
     hyperparameters: dict,
-    m: int = 0,
-    n: int = -1,
-    loss: bool = False,
-    validation_loss: bool = False,
-    mse: bool = False,
-    validation_mse: bool = False,
-    kld: bool = False,
-    validation_kld: bool = False,
-    mmd: bool = False,
-    validation_mmd: bool = False,
-
+    # m: int = 0,
+    # n: int = -1,
+    save_to: str,
+    save_format: str="png"
 )-> None:
 
     ###########################################################################
@@ -51,7 +45,7 @@ def plotHistory(
     fig, axs = plt.subplots(
         nrows=4,
         ncols=2,
-        figsize=(8, 5),
+        figsize=(20, 10),
         sharex=True,
         sharey="row",
         gridspec_kw={
@@ -103,12 +97,12 @@ def plotHistory(
     axs[3, 0].set_xlabel("Epochs")
     axs[3, 1].set_xlabel("Epochs")
     ###########################################################################
-    plot_title = (
-    f"{hyperparameters['reconstruction_weight']:02.1f}"
-    f"{hyperparameters['lambda']:02.1f}"
-    # f"L = $\alpha$ * MSE + KLD + ($\lambda -1$) MMD"
+    FileDirectory().check_directory(save_to, exit=False)
+
+    file_name = (
+        f"ae_MSE_{hyperparameters['reconstruction_weight']:1d}"
+        f"MMD_{hyperparameters['lambda'] -1:1.0f}"
     )
 
-    ###########################################################################
-
+    fig.savefig(f"{save_to}/{file_name}.{save_format}")
 ###############################################################################
