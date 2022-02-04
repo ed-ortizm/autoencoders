@@ -3,9 +3,9 @@
 from configparser import ConfigParser, ExtendedInterpolation
 import glob
 import time
+import pickle
 
-from autoencoders.ae import AutoEncoder
-from autoencoders.plotAE import visual_train_history
+from autoencoders.plotAE import visual_history
 from sdss.superclasses import FileDirectory
 
 ###############################################################################
@@ -30,20 +30,22 @@ save_format = parser.get("file", "save_format")
 for idx, location in enumerate(model_locations):
 
     bin_number = location.split("/")[-4]
-
+    ###########################################################################
     print(f"Model {idx}, bin: {bin_number}", end="\r")
+    file_location = f"{location}/train_history.pkl"
 
-    ae = AutoEncoder(reload=True, reload_from=location)
+    with open(file_location, "rb") as file:
+        parameters = pickle.load(file)
 
-    visual_train_history(
-        train_history=ae.history,
-        hyperparameters=ae.hyperparameters,
+    [architecture, hyperparameters, history] = parameters
+
+    visual_history(
+        history=history,
+        hyperparameters=hyperparameters,
         save_to=f"{save_to}/{bin_number}",
         save_format=save_format,
         slice_from=slice_from,
     )
-
-    del ae
 
 ###############################################################################
 time_finish = time.time()
