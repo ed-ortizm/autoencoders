@@ -1,13 +1,26 @@
 import matplotlib.pyplot as plt
-from matplotlib import ticker
 import numpy as np
+from matplotlib.ticker import (MultipleLocator,
+                               FormatStrFormatter,
+                               AutoMinorLocator)
 
 from sdss.superclasses import FileDirectory
 
 ###############################################################################
+def ax_tex(ax: plt.Axes, x: float, y: float, text: str) -> None:
+    """
+    Transfrom axes to position text in sub-plop
 
-###############################################################################
-def ax_tex(ax, x, y, text):
+    INPUTS
+        ax: the axes to transform
+        x, y: where to locate the figure
+            0, 0 is bottom left
+            1, 1 is upper right
+        text: text
+    """
+
+    assert 0 <= x <= 1
+    assert 0 <= y <= 1
 
     ax.text(
         x,
@@ -16,25 +29,37 @@ def ax_tex(ax, x, y, text):
         horizontalalignment="center",
         verticalalignment="center",
         transform=ax.transAxes,
+        size="x-large",
+        weight="bold",
+        # backgroundcolor=None
     )
-    # return ax
-
-
 ###############################################################################
-# def slice_list(full_list, start_slice_at):
-#     return
-###############################################################################
-def visual_train_history(
-    train_history: dict,
+def visual_history(
+    history: dict,
     hyperparameters: dict,
     figsize: tuple = (10, 10),
-    # slice_epochs: bool = False,
     slice_from: int = 0,
     save_to: str = ".",
     save_format: str = "png",
 ) -> None:
 
-    ###########################################################################
+    """
+    Plots loss and its elements, as well as the validations counterpart
+
+    INPUTS
+        history: contains values of loss and metrics
+            {
+                "loss":[values...], "val_loss":[values...],
+                "metric":[metric...], "val_metric":[bodies...],
+                ...
+            }
+        hyperparameters: contains AE hyperparameters
+            { "lambda": value, "reconstruction_weight": value}
+        figsize:
+        slice_from: indicate epoch number to start checking plot
+        save_to:
+        save_format:
+    """
     [
         loss,
         validation_loss,
@@ -45,80 +70,92 @@ def visual_train_history(
         mmd,
         validation_mmd,
     ] = [
-        train_history["loss"][slice_from:],
-        train_history["val_loss"][slice_from:],
-        train_history["mse"][slice_from:],
-        train_history["val_mse"][slice_from:],
-        train_history["KLD"][slice_from:],
-        train_history["val_KLD"][slice_from:],
-        train_history["MMD"][slice_from:],
-        train_history["val_MMD"][slice_from:],
+        history["loss"][slice_from:],
+        history["val_loss"][slice_from:],
+        history["mse"][slice_from:],
+        history["val_mse"][slice_from:],
+        history["KLD"][slice_from:],
+        history["val_KLD"][slice_from:],
+        history["MMD"][slice_from:],
+        history["val_MMD"][slice_from:],
     ]
 
     epochs = [i + 1 for i in range(len(loss) + slice_from)][slice_from:]
 
     ###########################################################################
-    fig, axs = plt.subplots(
-        nrows=4,
+    fig, [(ax_loss, ax_mse), (ax_kld, ax_mmd)] = plt.subplots(
+        nrows=2,
         ncols=2,
         figsize=figsize,
         sharex=True,
-        sharey="row",
+        # sharey="row",
         gridspec_kw={
-            # "wspace":.5,
-            "hspace": 0.5
+            "wspace": None,
+            "hspace": 0.2
         },
+    constrained_layout=True
+    )
+
+    linewidth=3
+    val_linewidth=2
+    ###########################################################################
+    # loss
+    ax_loss.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    ax_tex(ax_loss, x=0.5, y=0.8, text="loss")
+
+    ax_loss.plot(epochs, loss,
+        "--o", color="black", linewidth=linewidth
+    )
+
+    ax_loss.plot(epochs, validation_loss,
+        "--*", label="validation", color="red", linewidth=val_linewidth
     )
 
     ###########################################################################
-    axs[0, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
-    ax_tex(axs[0, 0], x=0.5, y=0.8, text="loss")
-    axs[0, 0].plot(epochs, loss, label="loss")
-
-    ax_tex(axs[0, 1], x=0.5, y=0.8, text="val loss")
-    axs[0, 1].plot(epochs, validation_loss, label="val loss")
-
-    ###########################################################################
-    axs[1, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
+    # mse
+    ax_mse.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     ax_tex(
-        axs[1, 0],
-        x=0.5,
-        y=0.8,
-        text=f"MSE: {hyperparameters['reconstruction_weight']:2d}",
+        ax_mse, x=0.5, y=0.8,
+        text=f"MSE: {hyperparameters['reconstruction_weight']:2d}"
     )
-    axs[1, 0].plot(epochs, mse, label="MSE")
 
-    ax_tex(axs[1, 1], x=0.5, y=0.8, text="val MSE")
-    axs[1, 1].plot(epochs, validation_mse, label="val MSE")
-
-    ###########################################################################
-    axs[2, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
-    ax_tex(axs[2, 0], x=0.5, y=0.8, text=f"KLD")
-    axs[2, 0].plot(epochs, kld, label="KLD")
-
-    ax_tex(axs[2, 1], x=0.5, y=0.8, text="val KLD")
-    axs[2, 1].plot(epochs, validation_kld, label="val KLD")
-
-    ###########################################################################
-    axs[3, 0].ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-
-    ax_tex(
-        axs[3, 0],
-        x=0.5,
-        y=0.8,
-        text=f"MMD: {hyperparameters['lambda'] -1:1.0f}",
+    ax_mse.plot(epochs, mse,
+        "--o", color="black", linewidth=linewidth
     )
-    axs[3, 0].plot(epochs, mmd, label="MMD")
-
-    ax_tex(axs[3, 1], x=0.5, y=0.8, text="val MMD")
-    axs[3, 1].plot(epochs, validation_mmd, label="val MMD")
+    ax_mse.plot(epochs, validation_mse,
+        "--*", label="validation", color="red", linewidth=val_linewidth
+    )
 
     ###########################################################################
-    axs[3, 0].set_xlabel("Epochs")
-    axs[3, 1].set_xlabel("Epochs")
+    # kld
+    ax_kld.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+    ax_tex(ax_kld, x=0.5, y=0.8, text="KLD")
+    ax_kld.plot(epochs, kld,
+        "--o", color="black", linewidth=linewidth
+    )
+    ax_kld.plot(epochs, validation_kld,
+        "--*", label="validation", color="red", linewidth=val_linewidth
+    )
+    ###########################################################################
+    # mmd
+    ax_mmd.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
+
+    ax_tex(ax_mmd, x=0.5, y=0.8,
+        text=f"MMD: {hyperparameters['lambda'] -1:1.0f}"
+    )
+
+    ax_mmd.plot(epochs, mmd,
+        "--o", color="black", linewidth=linewidth
+    )
+    mmd_line, = ax_mmd.plot(epochs, validation_mmd,
+        "--*", label="validation", color="red", linewidth=val_linewidth
+    )
+    ###########################################################################
+    ax_kld.set_xlabel("Epochs")
+    ax_kld.xaxis.set_major_formatter(FormatStrFormatter('% 1.0f'))
+    ax_mmd.set_xlabel("Epochs")
+    ax_mmd.xaxis.set_major_formatter(FormatStrFormatter('% 1.0f'))
+    fig.legend([mmd_line], ["validation"],loc="center")
     ###########################################################################
     FileDirectory().check_directory(save_to, exit=False)
 
@@ -130,6 +167,4 @@ def visual_train_history(
     fig.savefig(f"{save_to}/{file_name}.{save_format}")
 
     plt.close()
-
-
 ###############################################################################
