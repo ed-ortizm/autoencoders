@@ -39,6 +39,7 @@ class SamplingLayer(keras.layers.Layer):
     def from_config(cls, config):
         return cls(**config)
 
+
 ###############################################################################
 class MyCustomLoss(keras.losses.Loss):
     """
@@ -85,6 +86,7 @@ class MyCustomLoss(keras.losses.Loss):
     @classmethod
     def from_config(cls, config):
         return cls(**config)
+
 
 ###############################################################################
 # class MyCustomMetric(keras.metrics.Metric):

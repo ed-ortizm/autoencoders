@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.8
 import os
+
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -57,8 +58,11 @@ print("Train the model")
 vae.train(data)
 del data
 # save model
-architecture_str = architecture["encoder"]\
-    + [architecture["latent_dimensions"]] + architecture["decoder"]
+architecture_str = (
+    architecture["encoder"]
+    + [architecture["latent_dimensions"]]
+    + architecture["decoder"]
+)
 architecture_str = "_".join(str(unit) for unit in architecture_str)
 
 model_directory = parser.get("directories", "output")
@@ -84,8 +88,7 @@ if save_reconstruction is True:
     print("Save reconstructed spectra")
     reconstruction = vae.reconstruct(observation)
     np.save(
-        f"{model_directory}/reconstructions_{model_name}.npy",
-        reconstruction
+        f"{model_directory}/reconstructions_{model_name}.npy", reconstruction
     )
 ###############################################################################
 tf = time.time()

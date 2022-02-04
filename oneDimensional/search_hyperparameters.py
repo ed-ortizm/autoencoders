@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.8
 import os
+
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
 os.environ["OMP_NUM_THREADS"] = "1"
@@ -13,7 +14,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 # 1 = INFO messages are not printed
 # 2 = INFO and WARNING messages are not printed
 # 3 = INFO, WARNING, and ERROR messages are not printed
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
 ###############################################################################
 import ctypes
 from configparser import ConfigParser, ExtendedInterpolation
@@ -28,6 +29,7 @@ import numpy as np
 
 from sdss.superclasses import ConfigurationFile, FileDirectory
 from autoencoders import hyperSearch
+
 ###############################################################################
 if __name__ == "__main__":
 
@@ -44,7 +46,7 @@ if __name__ == "__main__":
     print(f"Load data")
     data_directory = parser.get("directories", "train")
     data_name = parser.get("files", "train")
-    data = np.load(f"{data_directory}/{data_name}", mmap_mode='r')
+    data = np.load(f"{data_directory}/{data_name}", mmap_mode="r")
 
     input_dimensions = data.shape[1]
     array_shape = data.shape
@@ -71,9 +73,7 @@ if __name__ == "__main__":
 
         lambdas = np.exp(
             np.random.uniform(
-                low=0,
-                high=np.log(1e5),
-                size=(grid["number_lambdas"])
+                low=0, high=np.log(1e5), size=(grid["number_lambdas"])
             )
         )
 
@@ -83,10 +83,7 @@ if __name__ == "__main__":
     ###########################################################################
     counter = mp.Value("i", 0)
 
-    share_data = RawArray(
-        np.ctypeslib.as_ctypes_type(array_dtype),
-        array_size
-    )
+    share_data = RawArray(np.ctypeslib.as_ctypes_type(array_dtype), array_size)
 
     #######################################################################
     model_directory = parser.get("directories", "output")

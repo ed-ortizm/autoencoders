@@ -1,5 +1,6 @@
 import os
 import pickle
+
 ###############################################################################
 import matplotlib
 import matplotlib.pyplot as plt
@@ -42,7 +43,6 @@ class AutoEncoder(FileDirectory):
 
         if reload is True:
 
-
             self.model = keras.models.load_model(
                 f"{reload_from}",
                 custom_objects={
@@ -51,15 +51,15 @@ class AutoEncoder(FileDirectory):
                 },
             )
 
-            self.KLD = None # KL Divergence
-            self.MMD = None # Maximum Mean Discrepancy
+            self.KLD = None  # KL Divergence
+            self.MMD = None  # Maximum Mean Discrepancy
 
             [
-            self.encoder,
-            self.decoder,
-            self.architecture,
-            self.hyperparameters,
-            self.history
+                self.encoder,
+                self.decoder,
+                self.architecture,
+                self.hyperparameters,
+                self.history,
             ] = self._set_class_instances_from_saved_model(reload_from)
 
             self.architecture["model_name"] = self.model.name
@@ -70,8 +70,8 @@ class AutoEncoder(FileDirectory):
             self.hyperparameters = hyperparameters
 
             self.encoder = None
-            self.KLD = None # KL Divergence
-            self.MMD = None # Maximum Mean Discrepancy
+            self.KLD = None  # KL Divergence
+            self.MMD = None  # Maximum Mean Discrepancy
             self.decoder = None
             self.model = None
             # To link encoder with decoder. Define here for documentation
@@ -101,6 +101,7 @@ class AutoEncoder(FileDirectory):
         )
 
         return [architecture_str, model_name]
+
     ###########################################################################
     def _set_class_instances_from_saved_model(self, reload_from: str) -> list:
 
@@ -120,18 +121,12 @@ class AutoEncoder(FileDirectory):
         with open(file_location, "rb") as file:
             parameters = pickle.load(file)
 
-        [
-        architecture,
-        hyperparameters,
-        train_history
-        ] = parameters
+        [architecture, hyperparameters, train_history] = parameters
 
         return [encoder, decoder, architecture, hyperparameters, train_history]
 
     ###########################################################################
-    def train(self,
-        spectra: np.array,
-    ) -> keras.callbacks.History:
+    def train(self, spectra: np.array) -> keras.callbacks.History:
 
         stopping_criteria = keras.callbacks.EarlyStopping(
             monitor="val_loss",
@@ -141,12 +136,12 @@ class AutoEncoder(FileDirectory):
             restore_best_weights=True,
         )
         learning_rate_schedule = keras.callbacks.ReduceLROnPlateau(
-            monitor='val_loss',
+            monitor="val_loss",
             factor=0.1,
             patience=self.hyperparameters["learning_rate_patience"],
             verbose=1,
             min_lr=0,
-            mode="min"
+            mode="min",
         )
 
         callbacks = [stopping_criteria, learning_rate_schedule]
@@ -158,10 +153,10 @@ class AutoEncoder(FileDirectory):
             epochs=self.hyperparameters["epochs"],
             verbose=self.architecture["verbose"],  # 1 for progress bar
             use_multiprocessing=self.hyperparameters["use_multiprocessing"],
-            workers = self.hyperparameters["workers"],
+            workers=self.hyperparameters["workers"],
             shuffle=True,
-            callbacks = callbacks,
-            validation_split = self.hyperparameters["validation_split"],
+            callbacks=callbacks,
+            validation_split=self.hyperparameters["validation_split"],
         )
 
         self.history = history.history
@@ -240,10 +235,7 @@ class AutoEncoder(FileDirectory):
         self.model.summary()
 
     ###########################################################################
-    def save_model(
-        self,
-        save_to: str,
-    ) -> None:
+    def save_model(self, save_to: str) -> None:
 
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
@@ -254,11 +246,7 @@ class AutoEncoder(FileDirectory):
 
         self.model.save(save_to)
         #######################################################################
-        parameters = [
-            self.architecture,
-            self.hyperparameters,
-            self.history
-        ]
+        parameters = [self.architecture, self.hyperparameters, self.history]
 
         with open(f"{save_to}/train_history.pkl", "wb") as file:
             pickle.dump(parameters, file)
@@ -288,10 +276,7 @@ class AutoEncoder(FileDirectory):
             weight_factor=reconstruction_weight,
         )
 
-        self.model.compile(
-            optimizer=optimizer,
-            loss=MSE,
-            metrics=["mse"])
+        self.model.compile(optimizer=optimizer, loss=MSE, metrics=["mse"])
 
     ###########################################################################
     def _build_ae(self):
@@ -299,7 +284,9 @@ class AutoEncoder(FileDirectory):
         self.original_output = self.decoder(self.encoder(self.original_input))
 
         self.model = keras.Model(
-            self.original_input, self.original_output, name=self.architecture["model_name"]
+            self.original_input,
+            self.original_output,
+            name=self.architecture["model_name"],
         )
 
         # Add KLD and MMD here to have a nice print of summary
@@ -317,9 +304,9 @@ class AutoEncoder(FileDirectory):
 
             # prepare MMD for loss
             mmd_weight = self.hyperparameters["mmd_weight"]
-            MMD =  mmd_weight * self.MMD
+            MMD = mmd_weight * self.MMD
             lambda_ = self.hyperparameters["lambda"]
-            MMD *= (alpha + lambda_ -1)
+            MMD *= alpha + lambda_ - 1
 
             self.model.add_loss([KLD, MMD])
 
@@ -404,23 +391,20 @@ class AutoEncoder(FileDirectory):
         dim = tf.shape(x)[1]
 
         tiled_x = tf.tile(
-            tf.reshape(x, tf.stack([x_size, 1, dim])),
-            tf.stack([1, y_size, 1])
+            tf.reshape(x, tf.stack([x_size, 1, dim])), tf.stack([1, y_size, 1])
         )
 
         tiled_y = tf.tile(
-            tf.reshape(y, tf.stack([1, y_size, dim])),
-            tf.stack([x_size, 1, 1])
+            tf.reshape(y, tf.stack([1, y_size, dim])), tf.stack([x_size, 1, 1])
         )
 
         kernel = tf.exp(
-            -tf.reduce_mean(
-                tf.square(tiled_x - tiled_y),
-                axis=2
-            ) / tf.cast(dim, tf.float32)
+            -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
+            / tf.cast(dim, tf.float32)
         )
 
         return kernel
+
     ###########################################################################
     def compute_mmd(self, x, y):
 
@@ -435,6 +419,7 @@ class AutoEncoder(FileDirectory):
         )
 
         return mmd
+
     ###########################################################################
     def _add_block(self, input_tensor: tf.Tensor, block: str) -> tf.Tensor:
         """

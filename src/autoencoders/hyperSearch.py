@@ -14,6 +14,8 @@ def to_numpy_array(array: RawArray, array_shape: tuple) -> np.array:
     array = np.ctypeslib.as_array(array)
 
     return array.reshape(array_shape)
+
+
 ###############################################################################
 def init_shared_data(
     share_counter: mp.Value,
@@ -54,6 +56,7 @@ def init_shared_data(
     model_directory = share_model_directory
     cores_per_worker = share_cores_per_worker
 
+
 ###############################################################################
 def build_and_train_model(
     rec_weight: float,
@@ -61,7 +64,7 @@ def build_and_train_model(
     kld_weight: float,
     alpha: float,
     lambda_: float,
-)-> None:
+) -> None:
     """
     Define the AutoEncoder instance based on hyperparameters from the grid
     PARAMETERS
@@ -83,7 +86,7 @@ def build_and_train_model(
         intra_op_parallelism_threads=jobs,
         inter_op_parallelism_threads=jobs,
         allow_soft_placement=True,
-        device_count={'CPU': jobs}
+        device_count={"CPU": jobs},
     )
     session = tf.compat.v1.Session(config=config)
     ###########################################################################
@@ -92,7 +95,6 @@ def build_and_train_model(
     hyperparameters["kld_weight"] = kld_weight
     hyperparameters["alpha"] = alpha
     hyperparameters["lambda"] = lambda_
-
 
     with counter.get_lock():
 
@@ -103,10 +105,12 @@ def build_and_train_model(
     vae = AutoEncoder(architecture, hyperparameters)
     vae.train(data)
     vae.save_model(model_directory)
-    
+
     print("Finish model training", end="\n")
 
     session.close()
+
+
 ###############################################################################
 def get_parameters_grid(hyperparameters: dict) -> itertools.product:
     """

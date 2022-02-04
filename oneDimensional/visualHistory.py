@@ -7,6 +7,7 @@ import time
 from autoencoders.ae import AutoEncoder
 from autoencoders.plotAE import visual_train_history
 from sdss.superclasses import FileDirectory
+
 ###############################################################################
 time_start = time.time()
 
@@ -37,9 +38,9 @@ for idx, location in enumerate(model_locations):
     visual_train_history(
         train_history=ae.history,
         hyperparameters=ae.hyperparameters,
-        save_to = f"{save_to}/{bin_number}",
-        save_format = save_format,
-        slice_from=slice_from
+        save_to=f"{save_to}/{bin_number}",
+        save_format=save_format,
+        slice_from=slice_from,
     )
 
     del ae
