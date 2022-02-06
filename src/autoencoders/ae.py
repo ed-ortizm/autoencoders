@@ -93,11 +93,11 @@ class AutoEncoder(FileDirectory):
 
         model_name = (
             f"{self.architecture['model_name']}"
-            f"_rec_{self.hyperparameters['reconstruction_weight']:.2f}"
-            f"_kld_{self.hyperparameters['kld_weight']:.2f}"
-            f"_mmd_{self.hyperparameters['mmd_weight']:.2f}"
-            f"_alpha_{self.hyperparameters['alpha']:.2f}"
-            f"_lambda_{self.hyperparameters['lambda']:.2f}"
+            f"_rec_{self.hyperparameters['reconstruction_weight']:1.0f}"
+            # f"_kld_{self.hyperparameters['kld_weight']:1.0f}"
+            f"_mmd_{self.hyperparameters['mmd_weight']:1.0f}"
+            # f"_alpha_{self.hyperparameters['alpha']:1.0f}"
+            f"_lambda_{self.hyperparameters['lambda']:1.0f}"
         )
 
         return [architecture_str, model_name]
@@ -130,6 +130,7 @@ class AutoEncoder(FileDirectory):
 
         stopping_criteria = keras.callbacks.EarlyStopping(
             monitor="val_loss",
+
             patience=self.hyperparameters["early_stop_patience"],
             verbose=1,
             mode="min",
