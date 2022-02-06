@@ -25,6 +25,7 @@ model_locations = glob.glob(
 ###############################################################################
 slice_from = parser.getint("configuration", "slice_from")
 save_to = parser.get("directory", "save_to")
+architecture = parser.get("common", "architecture")
 save_format = parser.get("file", "save_format")
 
 for idx, location in enumerate(model_locations):
@@ -37,12 +38,12 @@ for idx, location in enumerate(model_locations):
     with open(file_location, "rb") as file:
         parameters = pickle.load(file)
 
-    [architecture, hyperparameters, history] = parameters
+    [_, hyperparameters, history] = parameters
 
     visual_history(
         history=history,
         hyperparameters=hyperparameters,
-        save_to=f"{save_to}/{bin_number}",
+        save_to=f"{save_to}/{bin_number}/{architecture}",
         save_format=save_format,
         slice_from=slice_from,
     )
