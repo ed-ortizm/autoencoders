@@ -1,18 +1,62 @@
 import numpy as np
 # Compute KLD
-KLD = -0.5 * np.mean(z_log_var - z_mean**2 - np.exp(z_log_var) + 1)
+# KLD = -0.5 * np.mean(z_log_var - z_mean**2 - np.exp(z_log_var) + 1)
 
 
 ###############################################################################
-class MMD:
+class NormalMMD:
+    """
+    Compute Maximun Mean Discrepancy between samples of a distribution and a
+    multivariate normal distribution
+    """
+    def __init__(self,
+        number_samples: int=200,
+    ):
+        """
+        number_samples: samples to draw from the multivariate normal
+        # dimension: dimensionality of samples
+        """
 
-    def __init__(self,):
-        pass
+        self.number_samples = number_samples
     ###########################################################################
-    def prior(self, number_samples, dim):
+    def compute_mmd(self,
+        in_samples: np.array,
+        sigma_sqr: float=None,
+    ) -> float:
+        """
+        INPUT
+            in_samples: samples from a distirubution used to compute its
+                divergence with a multivariate Normal
+            sigma_sqrt: dispersion factor when computing kernels
+        OUTPUTS
+        """
 
-        return np.random.normal(200, dim)
+        dim = in_samples.sahpe[1]
+
+        if sigma_sqr == None:
+            sigma_sqr = 2/dim
+
+        prior_samples = self._prior(self.number_samples, dim)
+
+        prior_kernel = self.compute_kernel(
+            prior_samples, prior_samples, sigma_sqr
+        )
+
+        in_kernel = self.compute_kernel(in_samples, in_samples, sigma_sqr)
+
+        mix_kernel = self.compute_kernel(
+            prior_samples, in_samples, sigma_sqr
+        )
+
+        mmd = (
+            np.mean(prior_kernel) + np.mean(in_kernel) - 2*np.mean(mix_kernel)
+        )
+
+        return mmd
     ###########################################################################
+    def _prior(self, number_samples: int, dimension: int) -> np.array:
+
+        return np.random.normal(size=(number_samples, dimension))
 
     ###########################################################################
     def compute_kernel(self, x, y, sigma_sqr):
@@ -31,28 +75,3 @@ class MMD:
         return kernel
 
     ###########################################################################
-    def compute_mmd(self,
-        in_samples: np.array,
-        sigma_sqr: float, # 2/dim
-        n_samples_from_prior: int = 200,
-        ) -> float:
-
-        dim = in_samples.sahpe[1]
-        prior_samples = self.prior(n_samples_from_prior, dim)
-
-        prior_kernel = self.compute_kernel(
-            prior_samples, prior_samples, sigma_sqr
-        )
-
-        in_kernel = self.compute_kernel(in_samples, in_samples, sigma_sqr)
-
-        prior_in_kernel = self.compute_kernel(
-            prior_samples, in_samples, sigma_sqr
-        )
-
-        mmd = (
-            np.mean(prior_kernel) + np.mean(in_kernel)
-            - 2 * np.mean(prior_in_kernel)
-        )
-
-        return mmd
