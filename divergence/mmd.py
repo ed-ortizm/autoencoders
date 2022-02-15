@@ -22,17 +22,30 @@ number_samples = parser.getint("common", "samples")
 
 distribution = parser.get("common", "distribution")
 
+parameters = ConfigurationFile().section_to_dictionary(
+    parser.items(distribution), value_separators = [","]
+)
 if distribution == "gaussian":
 
-    parameters = parser.items("gaussian")
-    divergence = mmd.multi_normal(number_samples,parameters)
+    divergence = mmd.gaussian(number_samples,parameters)
 
     print(divergence)
 
 elif distribution == "uniform":
 
-    parameters = parser.items("uniform")
     divergence = mmd.uniform(number_samples,parameters)
+
+    print(divergence)
+
+elif distribution == "gamma":
+
+    divergence = mmd.gamma(number_samples,parameters)
+
+    print(divergence)
+
+elif distribution == "exponential":
+
+    divergence = mmd.gamma(number_samples,parameters)
 
     print(divergence)
 ###############################################################################

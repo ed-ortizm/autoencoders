@@ -1,12 +1,11 @@
 import numpy as np
 
-from sdss.superclasses import ConfigurationFile
 # Compute KLD
 # KLD = -0.5 * np.mean(z_log_var - z_mean**2 - np.exp(z_log_var) + 1)
 
 
 ###############################################################################
-class MMDtoNormal(ConfigurationFile):
+class MMDtoNormal:
     """
     Compute Maximun Mean Discrepancy between samples of a distribution and a
     multivariate normal distribution
@@ -19,6 +18,33 @@ class MMDtoNormal(ConfigurationFile):
         """
         self.prior_samples = prior_samples
 
+    ###########################################################################
+    def gamma(self, number_samples: int, parameters: tuple) -> float:
+        """
+        Compute mmd between an uniform and a Normal
+        distribution
+
+        INPUT
+            number_samples: number of samples to draw from gamma
+            parameters: parameters of uniform distribution
+                ("sahpe" = "1, 4", "scale" = "1, 1")
+
+        OUTPUT
+            MMD between the distributions
+        """
+
+
+        # make sure dimension is properly set
+        dimension = len(parameters["shape"])
+
+        assert len(parameters["scale"]) == dimension
+
+        in_samples = np.random.gamma(
+            parameters["shape"], parameters["scale"],
+            size=(number_samples, dimension)
+        )
+
+        return self.compute_mmd(in_samples)
     ###########################################################################
     def uniform(self, number_samples: int, parameters: tuple) -> float:
         """
@@ -35,13 +61,14 @@ class MMDtoNormal(ConfigurationFile):
             MMD between the distributions
         """
 
-        parameters = super().section_to_dictionary(
-            parameters, value_separators = [","]
-        )
+        # make sure dimension is properly set
+        dimension = len(parameters["high"])
+
+        assert len(parameters["low"]) == dimension
 
         in_samples = np.random.uniform(
             parameters["low"], parameters["high"],
-            size=(number_samples, parameters["dimension"])
+            size=(number_samples, dimension)
         )
 
         return self.compute_mmd(in_samples)
@@ -61,14 +88,12 @@ class MMDtoNormal(ConfigurationFile):
             MMD between the distributions
         """
 
-        parameters = super().section_to_dictionary(
-            parameters, value_separators = [","]
-        )
-
         mean = np.array(parameters["mean"])
-        assert mean.size == parameters["dimension"]
 
         covariance = np.diag(parameters["covariance"])
+
+        # make sure dimensions are properly set
+        assert mean.size == covariance.shape[0]
 
         in_samples = np.random.multivariate_normal(
             mean, covariance, size=number_samples
