@@ -5,19 +5,18 @@ import numpy as np
 
 
 ###############################################################################
-class NormalMMD:
+class MMDtoNormal:
     """
     Compute Maximun Mean Discrepancy between samples of a distribution and a
     multivariate normal distribution
     """
 
-    def __init__(self, number_samples: int = 200):
+    def __init__(self, prior_samples: int = 200):
         """
-        number_samples: samples to draw from the multivariate normal
-        # dimension: dimensionality of samples
+        INPUT
+            prior_samples: samples to draw from the multivariate normal
         """
-
-        self.number_samples = number_samples
+        self.prior_samples = prior_samples
 
     ###########################################################################
     def compute_mmd(
@@ -36,7 +35,7 @@ class NormalMMD:
         if sigma_sqr == None:
             sigma_sqr = 2 / dim
 
-        prior_samples = self._prior(self.number_samples, dim)
+        prior_samples = self._prior(self.prior_samples, dim)
 
         prior_kernel = self.compute_kernel(
             prior_samples, prior_samples, sigma_sqr
