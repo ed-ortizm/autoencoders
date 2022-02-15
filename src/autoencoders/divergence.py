@@ -1,4 +1,5 @@
 import numpy as np
+
 # Compute KLD
 # KLD = -0.5 * np.mean(z_log_var - z_mean**2 - np.exp(z_log_var) + 1)
 
@@ -9,19 +10,18 @@ class NormalMMD:
     Compute Maximun Mean Discrepancy between samples of a distribution and a
     multivariate normal distribution
     """
-    def __init__(self,
-        number_samples: int=200,
-    ):
+
+    def __init__(self, number_samples: int = 200):
         """
         number_samples: samples to draw from the multivariate normal
         # dimension: dimensionality of samples
         """
 
         self.number_samples = number_samples
+
     ###########################################################################
-    def compute_mmd(self,
-        in_samples: np.array,
-        sigma_sqr: float=None,
+    def compute_mmd(
+        self, in_samples: np.array, sigma_sqr: float = None
     ) -> float:
         """
         INPUT
@@ -34,7 +34,7 @@ class NormalMMD:
         dim = in_samples.sahpe[1]
 
         if sigma_sqr == None:
-            sigma_sqr = 2/dim
+            sigma_sqr = 2 / dim
 
         prior_samples = self._prior(self.number_samples, dim)
 
@@ -44,15 +44,16 @@ class NormalMMD:
 
         in_kernel = self.compute_kernel(in_samples, in_samples, sigma_sqr)
 
-        mix_kernel = self.compute_kernel(
-            prior_samples, in_samples, sigma_sqr
-        )
+        mix_kernel = self.compute_kernel(prior_samples, in_samples, sigma_sqr)
 
         mmd = (
-            np.mean(prior_kernel) + np.mean(in_kernel) - 2*np.mean(mix_kernel)
+            np.mean(prior_kernel)
+            + np.mean(in_kernel)
+            - 2 * np.mean(mix_kernel)
         )
 
         return mmd
+
     ###########################################################################
     def _prior(self, number_samples: int, dimension: int) -> np.array:
 
@@ -70,7 +71,7 @@ class NormalMMD:
         tiled_y = np.tile(y.reshape(1, y_size, dim), (x_size, 1, 1))
 
         z_diff = tiled_x - tiled_y
-        kernel = np.exp(-np.mean(z_diff**2, axis=2) / (2 * sigma_sqr))
+        kernel = np.exp(-np.mean(z_diff ** 2, axis=2) / (2 * sigma_sqr))
 
         return kernel
 
