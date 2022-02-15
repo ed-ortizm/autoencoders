@@ -27,25 +27,31 @@ parameters = ConfigurationFile().section_to_dictionary(
 )
 if distribution == "gaussian":
 
-    divergence = mmd.gaussian(number_samples,parameters)
+    divergence = mmd.gaussian(number_samples, parameters)
 
     print(divergence)
 
 elif distribution == "uniform":
 
-    divergence = mmd.uniform(number_samples,parameters)
+    divergence = mmd.uniform(number_samples, parameters)
 
     print(divergence)
 
 elif distribution == "gamma":
 
-    divergence = mmd.gamma(number_samples,parameters)
+    divergence = mmd.gamma(number_samples, parameters)
 
     print(divergence)
 
 elif distribution == "exponential":
 
-    divergence = mmd.exponential(number_samples,parameters)
+    divergence = mmd.exponential(number_samples, parameters)
+
+    print(divergence)
+
+elif distribution == "poisson":
+
+    divergence = mmd.poisson(number_samples, parameters)
 
     print(divergence)
 ###############################################################################
