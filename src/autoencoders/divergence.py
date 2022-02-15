@@ -19,6 +19,31 @@ class MMDtoNormal:
         self.prior_samples = prior_samples
 
     ###########################################################################
+    def exponential(self, number_samples: int, parameters: tuple) -> float:
+        """
+        Compute mmd between an uniform and a Normal
+        distribution
+
+        INPUT
+            number_samples: number of samples to draw from gamma
+            parameters: parameters of uniform distribution
+                ("sahpe" = "1, 4", "scale" = "1, 1")
+
+        OUTPUT
+            MMD between the distributions
+        """
+
+
+        # make sure dimension is properly set
+        dimension = len(parameters["scale"])
+
+        in_samples = np.random.exponential(
+            parameters["scale"],
+            size=(number_samples, dimension)
+        )
+
+        return self.compute_mmd(in_samples)
+    ###########################################################################
     def gamma(self, number_samples: int, parameters: tuple) -> float:
         """
         Compute mmd between an uniform and a Normal

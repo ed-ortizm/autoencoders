@@ -45,7 +45,7 @@ elif distribution == "gamma":
 
 elif distribution == "exponential":
 
-    divergence = mmd.gamma(number_samples,parameters)
+    divergence = mmd.exponential(number_samples,parameters)
 
     print(divergence)
 ###############################################################################
