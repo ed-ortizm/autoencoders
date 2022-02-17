@@ -5,7 +5,155 @@ import numpy as np
 
 
 ###############################################################################
-class MMDtoNormal:
+class Distribution:
+    """
+    Class with distributions to use with MMD and KLD to Normal distribution
+    """
+
+    def __init__(self):
+        pass
+    ###########################################################################
+    def poisson(self, number_samples: int, parameters: dict) -> np.array:
+        """
+        Sample from poisson distribution
+
+        INPUT
+            number_samples: number of samples to draw
+            parameters: parameters of poisson distribution
+            {"lambda": [2, 5, 45]}
+
+        OUTPUT
+            array with samples from distribution
+        """
+
+
+        # make sure dimension is properly set
+        dimension = len(parameters["lambda"])
+
+        samples = np.random.poisson(
+            parameters["lambda"],
+            size=(number_samples, dimension)
+        )
+
+        return samples
+    ###########################################################################
+    def exponential(self, number_samples: int, parameters: dict) -> np.array:
+        """
+        Sample from exponential distribution
+
+        INPUT
+            number_samples: number of samples to draw
+            parameters: parameters of exponential distribution
+                {"scale": [1, 1]}
+
+        OUTPUT
+            array with samples from distribution
+        """
+
+
+        # make sure dimension is properly set
+        dimension = len(parameters["scale"])
+
+        samples = np.random.exponential(
+            parameters["scale"],
+            size=(number_samples, dimension)
+        )
+
+        return samples
+    ###########################################################################
+    def gamma(self, number_samples: int, parameters: dict) -> np.array:
+        """
+        Sample from gamma distribution
+
+        INPUT
+            number_samples: number of samples to draw
+            parameters: parameters of gamma distribution
+                {"shape": [1, 1], "scale": [1, 1]}
+
+        OUTPUT
+            array with samples from distribution
+        """
+
+
+        # make sure dimension is properly set
+        dimension = len(parameters["shape"])
+
+        assert len(parameters["scale"]) == dimension
+
+        samples = np.random.gamma(
+            parameters["shape"], parameters["scale"],
+            size=(number_samples, dimension)
+        )
+
+        return samples
+    ###########################################################################
+    def uniform(self, number_samples: int, parameters: dict) -> np.array:
+        """
+        Sample from uniform distribution
+
+        INPUT
+            number_samples: number of samples to draw
+            parameters: parameters of uniform distribution
+                {"low": [0, 6], "high": [1 , 20]}
+
+        OUTPUT
+            array with samples from distribution
+        """
+
+        # make sure dimension is properly set
+        dimension = len(parameters["high"])
+
+        assert len(parameters["low"]) == dimension
+
+        samples = np.random.uniform(
+            parameters["low"], parameters["high"],
+            size=(number_samples, dimension)
+        )
+
+        return samples
+    ###########################################################################
+    def gaussian(self, number_samples: int, parameters: dict) -> np.array:
+        """
+        Sample from gaussian distribution
+
+        INPUT
+            number_samples: number of samples to draw
+            parameters: parameters of gaussian
+                {"mean": [1, 2], "covariance": [4, 2]}
+
+        OUTPUT
+            array with samples from distribution
+        """
+
+        mean = np.array(parameters["mean"])
+
+        covariance = np.diag(parameters["covariance"])
+
+        # make sure dimensions are properly set
+        assert mean.size == covariance.shape[0]
+
+        samples = np.random.multivariate_normal(
+            mean, covariance, size=number_samples
+        )
+
+        return samples
+    ###########################################################################
+    def normal(self, number_samples: int, dimension: int) -> np.array:
+        """
+        Samples from normal distribution
+
+        INPUT
+            number_samples: number of samples to draw
+            dimension: dimension of the sampled vector
+
+        OUTPUT
+            array with samples from distribution
+        """
+
+        return np.random.normal(size=(number_samples, dimension))
+
+###############################################################################
+class MMD(Distribution):
     """
     Compute Maximun Mean Discrepancy between samples of a distribution and a
     multivariate normal distribution
@@ -19,141 +167,9 @@ class MMDtoNormal:
         self.prior_samples = prior_samples
 
     ###########################################################################
-    def poisson(self, number_samples: int, parameters: tuple) -> float:
-        """
-        Compute mmd between an uniform and a Normal
-        distribution
-
-        INPUT
-            number_samples: number of samples to draw from gamma
-            parameters: parameters of uniform distribution
-                ("sahpe" = "1, 4", "scale" = "1, 1")
-
-        OUTPUT
-            MMD between the distributions
-        """
-
-
-        # make sure dimension is properly set
-        dimension = len(parameters["lambda"])
-
-        in_samples = np.random.poisson(
-            parameters["lambda"],
-            size=(number_samples, dimension)
-        )
-
-        return self.compute_mmd(in_samples)
-    ###########################################################################
-    def exponential(self, number_samples: int, parameters: tuple) -> float:
-        """
-        Compute mmd between an uniform and a Normal
-        distribution
-
-        INPUT
-            number_samples: number of samples to draw from gamma
-            parameters: parameters of uniform distribution
-                ("sahpe" = "1, 4", "scale" = "1, 1")
-
-        OUTPUT
-            MMD between the distributions
-        """
-
-
-        # make sure dimension is properly set
-        dimension = len(parameters["scale"])
-
-        in_samples = np.random.exponential(
-            parameters["scale"],
-            size=(number_samples, dimension)
-        )
-
-        return self.compute_mmd(in_samples)
-    ###########################################################################
-    def gamma(self, number_samples: int, parameters: tuple) -> float:
-        """
-        Compute mmd between an uniform and a Normal
-        distribution
-
-        INPUT
-            number_samples: number of samples to draw from gamma
-            parameters: parameters of uniform distribution
-                ("sahpe" = "1, 4", "scale" = "1, 1")
-
-        OUTPUT
-            MMD between the distributions
-        """
-
-
-        # make sure dimension is properly set
-        dimension = len(parameters["shape"])
-
-        assert len(parameters["scale"]) == dimension
-
-        in_samples = np.random.gamma(
-            parameters["shape"], parameters["scale"],
-            size=(number_samples, dimension)
-        )
-
-        return self.compute_mmd(in_samples)
-    ###########################################################################
-    def uniform(self, number_samples: int, parameters: tuple) -> float:
-        """
-        Compute mmd between an uniform and a Normal
-        distribution
-
-        INPUT
-            number_samples: number of samples for the multivarite
-                gaussian
-            parameters: parameters of uniform distribution
-                ("low" = "0", "high" = "1", "dimension" = "4")
-
-        OUTPUT
-            MMD between the distributions
-        """
-
-        # make sure dimension is properly set
-        dimension = len(parameters["high"])
-
-        assert len(parameters["low"]) == dimension
-
-        in_samples = np.random.uniform(
-            parameters["low"], parameters["high"],
-            size=(number_samples, dimension)
-        )
-
-        return self.compute_mmd(in_samples)
-    ###########################################################################
-    def gaussian(self, number_samples: int, parameters: tuple) -> float:
-        """
-        Compute mmd between a multivariate gaussian and a Normal
-        distribution
-
-        INPUT
-            number_samples: number of samples for the multivarite
-                gaussian
-            parameters: parameters of multivariate gaussian
-                ("dimension" = "6", "mean" = "1, 2", "covariance" = "4, 2")
-
-        OUTPUT
-            MMD between the distributions
-        """
-
-        mean = np.array(parameters["mean"])
-
-        covariance = np.diag(parameters["covariance"])
-
-        # make sure dimensions are properly set
-        assert mean.size == covariance.shape[0]
-
-        in_samples = np.random.multivariate_normal(
-            mean, covariance, size=number_samples
-        )
-
-        return self.compute_mmd(in_samples)
-    ###########################################################################
     def compute_mmd(
-        self, in_samples: np.array, sigma_sqr: float = None
-    ) -> float:
+        self, in_samples: np.array, sigma_sqr: np.array = None
+    ) -> np.array:
         """
         INPUT
             in_samples: samples from a distirubution used to compute its
@@ -184,11 +200,6 @@ class MMDtoNormal:
         )
 
         return mmd
-
-    ###########################################################################
-    def _prior(self, number_samples: int, dimension: int) -> np.array:
-
-        return np.random.normal(size=(number_samples, dimension))
 
     ###########################################################################
     def compute_kernel(self, x, y, sigma_sqr):
