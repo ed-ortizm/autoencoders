@@ -159,23 +159,118 @@ class MMD(Distribution):
     multivariate normal distribution
     """
 
-    def __init__(self, prior_samples: int = 200):
+    def __init__(self, prior_samples: int = 200, sigma_sqr: float=None):
         """
         INPUT
             prior_samples: samples to draw from the multivariate normal
+            sigma_sqr: kernel width
         """
         self.prior_samples = prior_samples
+        self.sigma_sqr = sigma_sqr
 
     ###########################################################################
-    def compute_mmd(
-        self, in_samples: np.array, sigma_sqr: np.array = None
-    ) -> np.array:
+    def to_gaussian(self, number_samples: int, parameters: dict) -> float:
+        """
+        Compute MMD between Normal and gaussian distribution
+
+        INPUT
+            number_samples: number of samples to draw from gaussian
+                distribution
+            parameters: parameters of gaussian distribution
+
+        OUTPUT
+            Maximun Mean Discrepancy to gaussian
+        """
+
+        in_samples = super().gaussian(number_samples, parameters)
+
+        mmd = self.compute_mmd(in_samples)
+
+        return mmd
+    ###########################################################################
+    def to_exponential(self, number_samples: int, parameters: dict) -> float:
+        """
+        Compute MMD between Normal and exponential distribution
+
+        INPUT
+            number_samples: number of samples to draw from exponential
+                distribution
+            parameters: parameters of exponential distribution
+
+        OUTPUT
+            Maximun Mean Discrepancy to exponential
+        """
+
+        in_samples = super().exponential(number_samples, parameters)
+
+        mmd = self.compute_mmd(in_samples)
+
+        return mmd
+    ###########################################################################
+    def to_gamma(self, number_samples: int, parameters: dict) -> float:
+        """
+        Compute MMD between Normal and gamma distribution
+
+        INPUT
+            number_samples: number of samples to draw from gamma
+                distribution
+            parameters: parameters of gamma distribution
+
+        OUTPUT
+            Maximun Mean Discrepancy to gamma
+        """
+
+        in_samples = super().gamma(number_samples, parameters)
+
+        mmd = self.compute_mmd(in_samples)
+
+        return mmd
+    ###########################################################################
+    def to_poisson(self, number_samples: int, parameters: dict) -> float:
+        """
+        Compute MMD between Normal and poisson distribution
+
+        INPUT
+            number_samples: number of samples to draw from poisson
+                distribution
+            parameters: parameters of poisson distribution
+
+        OUTPUT
+            Maximun Mean Discrepancy to poisson
+        """
+
+        in_samples = super().poisson(number_samples, parameters)
+
+        mmd = self.compute_mmd(in_samples)
+
+        return mmd
+    ###########################################################################
+    def to_uniform(self, number_samples: int, parameters: dict) -> float:
+        """
+        Compute MMD between Normal and uniform distribution
+
+        INPUT
+            number_samples: number of samples to draw from uniform
+                distribution
+            parameters: parameters of uniform distribution
+
+        OUTPUT
+            Maximun Mean Discrepancy to uniform
+        """
+
+        in_samples = super().uniform(number_samples, parameters)
+
+        mmd = self.compute_mmd(in_samples)
+
+        return mmd
+    ###########################################################################
+    def compute_mmd(self, in_samples: np.array) -> float:
         """
         INPUT
             in_samples: samples from a distirubution used to compute its
                 divergence with a multivariate Normal
-            sigma_sqrt: dispersion factor when computing kernels
         OUTPUTS
+            Maximun Mean Discrepancy of in_samples to normal distribution
         """
 
         dim = in_samples.shape[1]
@@ -183,7 +278,7 @@ class MMD(Distribution):
         if sigma_sqr == None:
             sigma_sqr = 2 / dim
 
-        prior_samples = self._prior(self.prior_samples, dim)
+        prior_samples = super().normal(self.prior_samples, dim)
 
         prior_kernel = self.compute_kernel(
             prior_samples, prior_samples, sigma_sqr
