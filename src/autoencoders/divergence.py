@@ -126,14 +126,6 @@ class Distribution:
         return np.random.normal(size=(number_samples, dimension))
 
 ###############################################################################
-# E(z) = mean + logvar * e(z^2)
-# P = e^(z^2)
-# KLD(P, E) = E*log(P/E)
-# (mean + logvar * e(z^2))*log(e^(z^2))
-#  (mean + logvar * e(z^2)) * log ((mean + logvar * e(z^2)))
-# (mean + logvar * e(z^2)) (1-log ((mean + logvar * e(z^2))))
-# Compute KLD
-# KLD = -0.5 * np.mean(z_log_var - z_mean**2 - np.exp(z_log_var) + 1)
 class KLD:
     """
     Compute Kullback-Leibler Divergence (KLD)
@@ -149,7 +141,7 @@ class KLD:
 
         self.grid_size = grid_size
         self.x = np.linspace(start, end, grid_size)
-        self.prior = norm(self.x)
+        self.prior = norm.pdf(self.x)
 
     ###########################################################################
     def to_gaussian(self, parameters: dict) -> float:
@@ -162,14 +154,13 @@ class KLD:
         OUTPUT
             KLD to gaussian
         """
-
-        pdf = norm.pdf(
-            slef.x,
+        Q = norm.pdf(
+            self.x,
             loc=parameters["mean"],
             scale=parameters["standard_deviation"]
         )
 
-        kld = entropy(self.prior, pdf)
+        kld = entropy(self.prior, Q)
 
         return kld
     ###########################################################################
@@ -183,18 +174,18 @@ class KLD:
         OUTPUT
             KLD to exponential
         """
-        pdf = expon.pdf(
-            slef.x,
+        Q = expon.pdf(
+            self.x,
             loc=parameters["location"],
             scale=parameters["scale"]
         )
 
-        kld = entropy(self.prior, pdf)
+        kld = entropy(self.prior, Q)
 
         return kld
 
     ###########################################################################
-    def to_gamma(self, number_samples: int, parameters: dict) -> float:
+    def to_gamma(self, parameters: dict) -> float:
         """
         Compute KLD between Normal and gamma distribution
 
@@ -204,17 +195,18 @@ class KLD:
         OUTPUT
             KLD to gamma
         """
-        pdf = gamma.pdf(
-            slef.x,
+        Q = gamma.pdf(
+            self.x,
             loc=parameters["location"],
-            scale=parameters["scale"]
+            scale=parameters["scale"],
+            a=parameters["a"]
         )
 
-        kld = entropy(self.prior, pdf)
+        kld = entropy(self.prior, Q)
 
         return kld
     ###########################################################################
-    def to_uniform(self, number_samples: int, parameters: dict) -> float:
+    def to_uniform(self, parameters: dict) -> float:
         """
         Compute KLD between Normal and uniform distribution
 
@@ -224,13 +216,14 @@ class KLD:
         OUTPUT
             KLD to uniform
         """
-        pdf = uniform.pdf(
-            slef.x,
-            loc=parameters["start"],
-            scale=parameters["end"]
+
+        Q = uniform.pdf(
+            self.x,
+            loc=parameters["low"],
+            scale=parameters["scale"]
         )
 
-        kld = entropy(self.prior, pdf)
+        kld = entropy(self.prior, Q)
 
         return kld
 
