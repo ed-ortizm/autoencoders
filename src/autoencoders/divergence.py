@@ -1,5 +1,5 @@
 import numpy as np
-from scipy.stats import norm, poisson, gamma, uniform, expon, entropy
+from scipy.stats import norm, gamma, uniform, expon, entropy
 
 ###############################################################################
 class Distribution:
@@ -9,30 +9,6 @@ class Distribution:
 
     def __init__(self):
         pass
-    ###########################################################################
-    def poisson(self, number_samples: int, parameters: dict) -> np.array:
-        """
-        Sample from poisson distribution
-
-        INPUT
-            number_samples: number of samples to draw
-            parameters: parameters of poisson distribution
-            {"lambda": [2, 5, 45]}
-
-        OUTPUT
-            array with samples from distribution
-        """
-
-
-        # make sure dimension is properly set
-        dimension = len(parameters["lambda"])
-
-        samples = np.random.poisson(
-            parameters["lambda"],
-            size=(number_samples, dimension)
-        )
-
-        return samples
     ###########################################################################
     def exponential(self, number_samples: int, parameters: dict) -> np.array:
         """
@@ -327,25 +303,6 @@ class MMD(Distribution):
         """
 
         in_samples = super().gamma(number_samples, parameters)
-
-        mmd = self.compute_mmd(in_samples)
-
-        return mmd
-    ###########################################################################
-    def to_poisson(self, number_samples: int, parameters: dict) -> float:
-        """
-        Compute MMD between Normal and poisson distribution
-
-        INPUT
-            number_samples: number of samples to draw from poisson
-                distribution
-            parameters: parameters of poisson distribution
-
-        OUTPUT
-            Maximun Mean Discrepancy to poisson
-        """
-
-        in_samples = super().poisson(number_samples, parameters)
 
         mmd = self.compute_mmd(in_samples)
 

@@ -49,11 +49,6 @@ elif distribution == "exponential":
 
     print(divergence)
 
-elif distribution == "poisson":
-
-    divergence = mmd.to_poisson(number_samples, parameters)
-
-    print(divergence)
 ###############################################################################
 finish_time = time.time()
 print(f"Run time: {finish_time-start_time:.2f}")
