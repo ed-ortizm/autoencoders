@@ -20,34 +20,35 @@ mmd = MMD(prior_samples)
 
 number_samples = parser.getint("common", "samples")
 
-distribution = parser.get("common", "distribution")
+for distribution in ["gaussian", "uniform", "gamma", "exponential"]:
 
-parameters = ConfigurationFile().section_to_dictionary(
-    parser.items(distribution), value_separators = [","]
-)
-if distribution == "gaussian":
+    parameters = ConfigurationFile().section_to_dictionary(
+        parser.items(distribution), value_separators = [","]
+    )
 
-    divergence = mmd.to_gaussian(number_samples, parameters)
+    if distribution == "gaussian":
 
-    print(divergence)
+        divergence = mmd.to_gaussian(number_samples, parameters)
 
-elif distribution == "uniform":
+        print(divergence)
 
-    divergence = mmd.to_uniform(number_samples, parameters)
+    elif distribution == "uniform":
 
-    print(divergence)
+        divergence = mmd.to_uniform(number_samples, parameters)
 
-elif distribution == "gamma":
+        print(divergence)
 
-    divergence = mmd.to_gamma(number_samples, parameters)
+    elif distribution == "gamma":
 
-    print(divergence)
+        divergence = mmd.to_gamma(number_samples, parameters)
 
-elif distribution == "exponential":
+        print(divergence)
 
-    divergence = mmd.to_exponential(number_samples, parameters)
+    elif distribution == "exponential":
 
-    print(divergence)
+        divergence = mmd.to_exponential(number_samples, parameters)
+
+        print(divergence)
 
 ###############################################################################
 finish_time = time.time()
