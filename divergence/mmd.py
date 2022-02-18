@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from sdss.superclasses import ConfigurationFile
-from autoencoders.divergence import MMDtoNormal
+from autoencoders.divergence import MMD
 
 ###############################################################################
 start_time = time.time()
@@ -16,7 +16,7 @@ parser.read("mmd.ini")
 ###############################################################################
 prior_samples = parser.getint("common", "prior_samples")
 
-mmd = MMDtoNormal(prior_samples)
+mmd = MMD(prior_samples)
 
 number_samples = parser.getint("common", "samples")
 
@@ -27,31 +27,31 @@ parameters = ConfigurationFile().section_to_dictionary(
 )
 if distribution == "gaussian":
 
-    divergence = mmd.gaussian(number_samples, parameters)
+    divergence = mmd.to_gaussian(number_samples, parameters)
 
     print(divergence)
 
 elif distribution == "uniform":
 
-    divergence = mmd.uniform(number_samples, parameters)
+    divergence = mmd.to_uniform(number_samples, parameters)
 
     print(divergence)
 
 elif distribution == "gamma":
 
-    divergence = mmd.gamma(number_samples, parameters)
+    divergence = mmd.to_gamma(number_samples, parameters)
 
     print(divergence)
 
 elif distribution == "exponential":
 
-    divergence = mmd.exponential(number_samples, parameters)
+    divergence = mmd.to_exponential(number_samples, parameters)
 
     print(divergence)
 
 elif distribution == "poisson":
 
-    divergence = mmd.poisson(number_samples, parameters)
+    divergence = mmd.to_poisson(number_samples, parameters)
 
     print(divergence)
 ###############################################################################

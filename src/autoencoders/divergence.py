@@ -275,7 +275,7 @@ class MMD(Distribution):
 
         dim = in_samples.shape[1]
 
-        if sigma_sqr == None:
+        if self.sigma_sqr == None:
             sigma_sqr = 2 / dim
 
         prior_samples = super().normal(self.prior_samples, dim)
