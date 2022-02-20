@@ -59,20 +59,15 @@ architecture["input_dimensions"] = input_dimensions
 hyperparameters = config_handler.section_to_dictionary(
     parser.items("hyperparameters"), value_separators=[]
 )
-print(hyperparameters)
-print(architecture)
 ###########################################################################
-
 vae = AutoEncoder(architecture, hyperparameters)
-
 number_params = vae.model.count_params()
 print(f"\nThe model has {number_params} parameters", end="\n")
-# vae.summary()
 #############################################################################
 # Training the model
-# print("Train the model")
-# vae.train(data)
-# del data
+print("Train the model", end="\n")
+vae.train(data)
+del data
 
 save_model_to = parser.get("directories", "save_model_to")
 print(f"Save model to: {save_model_to}", end="\n")
