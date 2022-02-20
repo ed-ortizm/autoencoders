@@ -31,7 +31,7 @@ class AutoEncoder(FileDirectory):
         architecture: dict = {None},
         hyperparameters: dict = {None},
         reload: bool = False,
-        reload_from: str = ".",
+        reload_from: str = None,
     ):
         """
         PARAMETERS

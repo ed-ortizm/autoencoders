@@ -8,6 +8,8 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
+
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 ###############################################################################
 from configparser import ConfigParser, ExtendedInterpolation
 import sys
@@ -15,37 +17,51 @@ import time
 
 ###############################################################################
 import numpy as np
+import tensorflow as tf
+from tensorflow import keras
 
-from autoencoders.ae import AutoEncoder, SamplingLayer
-from autoencoders.customObjects import MyCustomLoss
+from autoencoders.ae import AutoEncoder
 from sdss.superclasses import ConfigurationFile, FileDirectory
-
 ###############################################################################
 ti = time.time()
 ###############################################################################
 config_handler = ConfigurationFile()
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-parser.read("vae.ini")
+parser.read("train.ini")
+###############################################################################
+# set the number of cores to use during training
+cores_per_worker = parser.getint("tensorflow-session", "cores")
+jobs = cores_per_worker
+config = tf.compat.v1.ConfigProto(
+    intra_op_parallelism_threads=jobs,
+    inter_op_parallelism_threads=jobs,
+    allow_soft_placement=True,
+    device_count={"CPU": jobs},
+)
+session = tf.compat.v1.Session(config=config)
 ###############################################################################
 # load data
-print(f"Load data")
-data_directory = parser.get("directories", "train")
-data_name = parser.get("files", "train")
-data = np.load(f"{data_directory}/{data_name}")
-input_dimensions = data.shape[1]
+# print(f"Load data")
+# data_directory = parser.get("directories", "train")
+# data_name = parser.get("files", "train")
+# data = np.load(f"{data_directory}/{data_name}")
+# input_dimensions = data.shape[1]
 ###############################################################################
+print(f"Build AutoEncoder", end="\n")
+
 architecture = config_handler.section_to_dictionary(
     parser.items("architecture"), value_separators=["_"]
 )
 
-architecture["input_dimensions"] = input_dimensions
+# architecture["input_dimensions"] = input_dimensions
+architecture["input_dimensions"] = 3000
 
 hyperparameters = config_handler.section_to_dictionary(
     parser.items("hyperparameters"), value_separators=[]
 )
 print(hyperparameters)
-###############################################################################
-print(f"Build AutoEncoder")
+print(architecture)
+###########################################################################
 
 vae = AutoEncoder(architecture, hyperparameters)
 
@@ -54,42 +70,30 @@ print(f"\nThe model has {number_params} parameters", end="\n")
 # vae.summary()
 #############################################################################
 # Training the model
-print("Train the model")
-vae.train(data)
-del data
-# save model
-architecture_str = (
-    architecture["encoder"]
-    + [architecture["latent_dimensions"]]
-    + architecture["decoder"]
-)
-architecture_str = "_".join(str(unit) for unit in architecture_str)
+# print("Train the model")
+# vae.train(data)
+# del data
 
-model_directory = parser.get("directories", "output")
-model_directory = f"{model_directory}/{architecture_str}"
-
-model_name = f"{architecture['model_name']}"
-model_name += f"_recw_{hyperparameters['reconstruction_weight']}"
-model_name += f"_alpha_{hyperparameters['alpha']}"
-model_name += f"_lambda_{hyperparameters['lambda']}"
-
-FileDirectory().check_directory(f"{model_directory}/{model_name}", exit=False)
-
-vae.save_model(f"{model_directory}/{model_name}")
+save_model_to = parser.get("directories", "save_model_to")
+print(f"Save model to: {save_model_to}", end="\n")
+vae.save_model(f"{save_model_to}")
 ###############################################################################
 # Save reconstructed data
-save_reconstruction = parser.getboolean("files", "save_reconstruction")
+# save_reconstruction = parser.getboolean("files", "save_reconstruction")
+#
+# if save_reconstruction is True:
+#
+#     print("Get reconstructed spectra after training...")
+#     observation_name = parser.get("files", "observation")
+#     observation = np.load(f"{data_directory}/{observation_name}")
+#     print("Save reconstructed spectra")
+#     reconstruction = vae.reconstruct(observation)
+#     np.save(
+#         f"{model_directory}/reconstructions_{model_name}.npy", reconstruction
+#     )
 
-if save_reconstruction is True:
-
-    print("Get reconstructed spectra after training...")
-    observation_name = parser.get("files", "observation")
-    observation = np.load(f"{data_directory}/{observation_name}")
-    print("Save reconstructed spectra")
-    reconstruction = vae.reconstruct(observation)
-    np.save(
-        f"{model_directory}/reconstructions_{model_name}.npy", reconstruction
-    )
+# close tf session to free resources
+session.close()
 ###############################################################################
 tf = time.time()
 print(f"Running time: {tf-ti:.2f}")

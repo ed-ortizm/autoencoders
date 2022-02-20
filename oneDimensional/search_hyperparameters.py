@@ -92,12 +92,6 @@ if __name__ == "__main__":
     #######################################################################
     model_directory = parser.get("directories", "output")
     ###########################################################################
-    # # 100 models with 80 k to train and 20 k to validate
-    # # 20: 302 [s] ~ 70% of each thread and load of ~70
-    # # 25: 267 [s] ~ 80% of each thread and load of ~100
-    # # 30: 235 [s] ~ 90% of each thread and load of ~120
-    # # 35: 235 [s] ~ 90% of each thread and load of ~130
-    # # 48: 260 [s] ~ 100% of each thread and load of ~ 160
     number_processes = parser.getint("configuration", "number_processes")
     cores_per_worker = parser.getint("configuration", "cores_per_worker")
     with mp.Pool(
