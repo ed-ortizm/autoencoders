@@ -69,15 +69,19 @@ if __name__ == "__main__":
     grid = config_handler.section_to_dictionary(
         parser.items("param-search"), value_separators=["_"]
     )
+
+    grid["reconstruction_weight"].append(input_dimensions)
+
     if grid["lambda"] == "random":
 
         lambdas = np.exp(
             np.random.uniform(
-                low=0, high=np.log(1e5), size=(grid["number_lambdas"])
+                low=0, high=np.log(2e2), size=(grid["number_lambdas"])
             )
         )
 
         grid["lambda"] = lambdas.tolist()
+
 
     grid = hyperSearch.get_parameters_grid(grid)
     ###########################################################################
