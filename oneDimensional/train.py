@@ -74,18 +74,19 @@ print(f"Save model to: {save_model_to}", end="\n")
 vae.save_model(f"{save_model_to}")
 ###############################################################################
 # Save reconstructed data
-# save_reconstruction = parser.getboolean("files", "save_reconstruction")
-#
-# if save_reconstruction is True:
-#
-#     print("Get reconstructed spectra after training...")
-#     observation_name = parser.get("files", "observation")
-#     observation = np.load(f"{data_directory}/{observation_name}")
-#     print("Save reconstructed spectra")
-#     reconstruction = vae.reconstruct(observation)
-#     np.save(
-#         f"{model_directory}/reconstructions_{model_name}.npy", reconstruction
-#     )
+save_reconstruction = parser.getboolean("files", "save_reconstruction")
+
+if save_reconstruction is True:
+
+    print("Save reconstructed spectra", end="\n")
+    _, long_model_name = vae.get_architecture_and_model_str()
+
+    observation_name = parser.get("files", "observation")
+    observation = np.load(f"{data_directory}/{observation_name}")
+    reconstruction = vae.reconstruct(observation)
+    np.save(
+        f"{data_directory}/reconstructions_{long_model_name}.npy", reconstruction
+    )
 
 # close tf session to free resources
 session.close()
