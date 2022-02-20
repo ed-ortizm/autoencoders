@@ -41,11 +41,11 @@ config = tf.compat.v1.ConfigProto(
 session = tf.compat.v1.Session(config=config)
 ###############################################################################
 # load data
-# print(f"Load data")
-# data_directory = parser.get("directories", "train")
-# data_name = parser.get("files", "train")
-# data = np.load(f"{data_directory}/{data_name}")
-# input_dimensions = data.shape[1]
+print(f"Load data", end="\n")
+data_directory = parser.get("directories", "train")
+data_name = parser.get("files", "train")
+data = np.load(f"{data_directory}/{data_name}")
+input_dimensions = data.shape[1]
 ###############################################################################
 print(f"Build AutoEncoder", end="\n")
 
@@ -53,8 +53,8 @@ architecture = config_handler.section_to_dictionary(
     parser.items("architecture"), value_separators=["_"]
 )
 
-# architecture["input_dimensions"] = input_dimensions
-architecture["input_dimensions"] = 3000
+architecture["input_dimensions"] = input_dimensions
+# architecture["input_dimensions"] = 3000
 
 hyperparameters = config_handler.section_to_dictionary(
     parser.items("hyperparameters"), value_separators=[]
