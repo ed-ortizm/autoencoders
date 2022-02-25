@@ -23,7 +23,7 @@ slice_from = parser.getint("configuration", "slice_from")
 save_to = parser.get("directory", "save_to")
 save_format = parser.get("file", "save_format")
 
-for idx, location in enumerate(model_locations):
+for idx, location in enumerate(models_directories):
 
     ###########################################################################
     print(f"Plot history of model {idx+1}", end="\r")
