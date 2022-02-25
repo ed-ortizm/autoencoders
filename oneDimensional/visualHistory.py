@@ -15,24 +15,19 @@ parser = ConfigParser(interpolation=ExtendedInterpolation())
 parser.read("visualHistory.ini")
 ###############################################################################
 # get relevant directories
-input_directory = parser.get("directory", "input")
-model_type = parser.get("common", "model")
-model_architecture = parser.get("common", "architecture")
+models_directory = parser.get("directory", "models")
 
-model_locations = glob.glob(
-    f"{input_directory}/bin_*/bin_*/{model_type}/{model_architecture}/*"
-)
+models_directories = glob.glob(f"{models_directory}/*")
 ###############################################################################
 slice_from = parser.getint("configuration", "slice_from")
 save_to = parser.get("directory", "save_to")
-architecture = parser.get("common", "architecture")
 save_format = parser.get("file", "save_format")
 
 for idx, location in enumerate(model_locations):
 
-    bin_number = location.split("/")[-4]
     ###########################################################################
-    print(f"Model {idx}, bin: {bin_number}", end="\r")
+    print(f"Plot history of model {idx+1}", end="\r")
+
     file_location = f"{location}/train_history.pkl"
 
     with open(file_location, "rb") as file:
@@ -43,7 +38,7 @@ for idx, location in enumerate(model_locations):
     visual_history(
         history=history,
         hyperparameters=hyperparameters,
-        save_to=f"{save_to}/{bin_number}/{architecture}",
+        save_to=f"{save_to}",
         save_format=save_format,
         slice_from=slice_from,
     )
