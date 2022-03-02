@@ -96,19 +96,18 @@ def build_and_train_model(
     hyperparameters["alpha"] = alpha
     hyperparameters["lambda"] = lambda_
 
+
     with counter.get_lock():
 
-        print(f"Train up to model N:{counter.value:05d}", end="\r")
+        print(f"Start training model {counter.value:04d}", end="\r")
 
-        # model_directory = f"{model_directory}_{counter.value:04d}"
+        model_location = f"{model_directory}/{counter.value:04d}"
+
         counter.value += 1
 
     vae = AutoEncoder(architecture, hyperparameters)
     vae.train(data)
-    model_directory = f"{model_directory}_{counter.value:04d}"
-    vae.save_model(model_directory)
-
-    print("Finish model training", end="\n")
+    vae.save_model(f"{model_location}")
 
     session.close()
 

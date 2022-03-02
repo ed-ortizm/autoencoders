@@ -240,9 +240,7 @@ class AutoEncoder(FileDirectory):
 
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
-        architecture_str, model_name = self.get_architecture_and_model_str()
 
-        save_to = f"{save_to}/{architecture_str}/{model_name}"
         super().check_directory(save_to, exit=False)
 
         self.model.save(save_to)
