@@ -6,7 +6,6 @@ from multiprocessing.sharedctypes import RawArray
 
 import numpy as np
 
-# from autoencoders.ae import AutoEncoder
 ###############################################################################
 def to_numpy_array(array: RawArray, array_shape: tuple) -> np.array:
     """Create a numpy array backed by a shared memory Array."""

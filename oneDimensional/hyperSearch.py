@@ -114,5 +114,9 @@ if __name__ == "__main__":
         pool.starmap(hyperSearch.build_and_train_model, grid)
 
     ###########################################################################
+    # Save configuration file
+    with open(f"{model_directory}/hyperSearch.ini", "w") as configfile:
+        parser.write(configfile)
+    ###########################################################################
     time_f = time.time()
     print(f"Running time: {time_f-ti:.2f}")
