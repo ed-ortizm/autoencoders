@@ -100,10 +100,12 @@ def build_and_train_model(
 
         print(f"Train up to model N:{counter.value:05d}", end="\r")
 
+        # model_directory = f"{model_directory}_{counter.value:04d}"
         counter.value += 1
 
     vae = AutoEncoder(architecture, hyperparameters)
     vae.train(data)
+    model_directory = f"{model_directory}_{counter.value:04d}"
     vae.save_model(model_directory)
 
     print("Finish model training", end="\n")

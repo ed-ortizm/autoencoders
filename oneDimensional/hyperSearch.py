@@ -14,7 +14,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 # 1 = INFO messages are not printed
 # 2 = INFO and WARNING messages are not printed
 # 3 = INFO, WARNING, and ERROR messages are not printed
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "1"
+os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 ###############################################################################
 import ctypes
 from configparser import ConfigParser, ExtendedInterpolation
@@ -40,12 +40,12 @@ if __name__ == "__main__":
     ###########################################################################
     config_handler = ConfigurationFile()
     parser = ConfigParser(interpolation=ExtendedInterpolation())
-    parser.read("search_hyperparameters.ini")
+    parser.read("hyperSearch.ini")
     ###########################################################################
     # load data
     print(f"Load data")
-    data_directory = parser.get("directories", "train")
-    data_name = parser.get("files", "train")
+    data_directory = parser.get("directory", "train")
+    data_name = parser.get("file", "train")
     data = np.load(f"{data_directory}/{data_name}", mmap_mode="r")
 
     input_dimensions = data.shape[1]
@@ -90,7 +90,9 @@ if __name__ == "__main__":
     share_data = RawArray(np.ctypeslib.as_ctypes_type(array_dtype), array_size)
 
     #######################################################################
-    model_directory = parser.get("directories", "output")
+    model_directory = parser.get("directory", "output")
+    model_name_head = parser.get("file", "model")
+    model_directory = f"{model_directory}/{model_name_head}"
     ###########################################################################
     number_processes = parser.getint("configuration", "number_processes")
     cores_per_worker = parser.getint("configuration", "cores_per_worker")
