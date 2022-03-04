@@ -1,5 +1,3 @@
-#!/usr/bin/env python3.8
-
 from configparser import ConfigParser, ExtendedInterpolation
 import glob
 import time
@@ -12,14 +10,16 @@ from sdss.superclasses import FileDirectory
 time_start = time.time()
 
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-parser.read("visualHistory.ini")
+parser_name = "visualHistory.ini"
+parser.read(f"{parser_name}")
 ###############################################################################
 # get relevant directories
 models_directory = parser.get("directory", "models")
 
-models_directories = glob.glob(f"{models_directory}/*")
+models_directories = glob.glob(f"{models_directory}/*/")
 ###############################################################################
 slice_from = parser.getint("configuration", "slice_from")
+
 save_to = parser.get("directory", "save_to")
 save_format = parser.get("file", "save_format")
 
@@ -43,6 +43,20 @@ for idx, location in enumerate(models_directories):
         slice_from=slice_from,
     )
 
+##############################################################################
+with open(f"{save_to}/{parser_name}", "w") as file:
+
+    parser.write(file)
+
+models_config = glob.glob(f"{models_directory}/*.ini")[0]
+configuration_file = ConfigParser(interpolation=ExtendedInterpolation())
+configuration_file.read(models_config)
+config_name = models_config.split("/")[-1]
+
+with open(f"{save_to}/{config_name}", "w") as file:
+
+    configuration_file.write(file)
+
 ###############################################################################
 time_finish = time.time()
-print(f" Run time: {time_finish - time_start: 1.0f}[s]")
+print(f"\nRun time: {time_finish - time_start: 1.0f}[s]")

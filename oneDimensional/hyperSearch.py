@@ -21,7 +21,6 @@ from configparser import ConfigParser, ExtendedInterpolation
 import itertools
 import multiprocessing as mp
 from multiprocessing.sharedctypes import RawArray
-import sys
 import time
 
 ###############################################################################

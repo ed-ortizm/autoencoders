@@ -76,7 +76,6 @@ def build_and_train_model(
     """
     ###########################################################################
     import tensorflow as tf
-    from tensorflow import keras
     from autoencoders.ae import AutoEncoder
 
     # set the number of cores to use per model in each worker
