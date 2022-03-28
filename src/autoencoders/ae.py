@@ -130,7 +130,7 @@ class AutoEncoder(FileDirectory):
             monitor="val_loss",
 
             patience=self.hyperparameters["early_stop_patience"],
-            verbose=1,
+            verbose=self.hyperparameters["verbose_early_stop"],
             mode="min",
             restore_best_weights=True,
         )
@@ -138,7 +138,7 @@ class AutoEncoder(FileDirectory):
             monitor="val_loss",
             factor=0.1,
             patience=self.hyperparameters["learning_rate_patience"],
-            verbose=1,
+            verbose=self.hyperparameters["verbose_learning_rate"],
             min_lr=0,
             mode="min",
         )
