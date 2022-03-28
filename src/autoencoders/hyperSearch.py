@@ -59,8 +59,6 @@ def init_shared_data(
 ###############################################################################
 def build_and_train_model(
     rec_weight: float,
-    mmd_weight: float,
-    kld_weight: float,
     alpha: float,
     lambda_: float,
 ) -> None:
@@ -68,8 +66,6 @@ def build_and_train_model(
     Define the AutoEncoder instance based on hyperparameters from the grid
     PARAMETERS
         rec_weight:
-        mmd_weight:
-        kld_weight:
         alpha:
         lambda_:
 
@@ -89,8 +85,6 @@ def build_and_train_model(
     session = tf.compat.v1.Session(config=config)
     ###########################################################################
     hyperparameters["reconstruction_weight"] = rec_weight
-    hyperparameters["mmd_weight"] = mmd_weight
-    hyperparameters["kld_weight"] = kld_weight
     hyperparameters["alpha"] = alpha
     hyperparameters["lambda"] = lambda_
 
@@ -114,7 +108,7 @@ def build_and_train_model(
 def get_parameters_grid(hyperparameters: dict) -> itertools.product:
     """
     Returns cartesian product of hyperparameters: reconstruction_weight,
-        mmd_weights, kld_weights, alpha and lambda
+        alpha and lambda
 
     PARAMETERS
         hyperparameters:
@@ -130,8 +124,6 @@ def get_parameters_grid(hyperparameters: dict) -> itertools.product:
 
     grid = itertools.product(
         hyperparameters["reconstruction_weight"],
-        hyperparameters["mmd_weight"],
-        hyperparameters["kld_weight"],
         hyperparameters["alpha"],
         hyperparameters["lambda"],
     )

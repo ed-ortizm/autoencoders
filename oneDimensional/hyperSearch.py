@@ -68,9 +68,20 @@ if __name__ == "__main__":
     grid = config_handler.section_to_dictionary(
         parser.items("param-search"), value_separators=["_"]
     )
+    ###########################################################################
+    # Set reconstruction weight as list
 
-    grid["reconstruction_weight"].append(input_dimensions)
+    if grid["reconstruction_weight"] == "None":
 
+        grid["reconstruction_weight"] = [input_dimensions]
+
+    if type(grid["reconstruction_weight"]) != type([]):
+
+        grid["reconstruction_weight"] = [
+            grid["reconstruction_weight"], input_dimensions
+        ]
+    ###########################################################################
+    # Set lambdas
     if grid["lambda"] == "random":
 
         lambdas = np.exp(
@@ -81,6 +92,13 @@ if __name__ == "__main__":
 
         grid["lambda"] = lambdas.tolist()
 
+    if grid["lambda"] == "uniform":
+
+        lambdas = np.arange(0, 1020, 20)
+        # lambda must be larger than 1
+        lambdas[0] = 2
+
+        grid["lambda"] = lambdas.tolist()
 
     grid = hyperSearch.get_parameters_grid(grid)
     ###########################################################################
@@ -89,9 +107,7 @@ if __name__ == "__main__":
     share_data = RawArray(np.ctypeslib.as_ctypes_type(array_dtype), array_size)
 
     #######################################################################
-    model_directory = parser.get("directory", "output")
-    model_name_head = parser.get("file", "model")
-    model_directory = f"{model_directory}/{model_name_head}"
+    model_directory = parser.get("directory", "models")
     ###########################################################################
     number_processes = parser.getint("configuration", "number_processes")
     cores_per_worker = parser.getint("configuration", "cores_per_worker")

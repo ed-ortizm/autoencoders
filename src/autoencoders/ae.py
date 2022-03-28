@@ -94,9 +94,7 @@ class AutoEncoder(FileDirectory):
         model_name = (
             f"{self.architecture['model_name']}"
             f"_rec_{self.hyperparameters['reconstruction_weight']:1.0f}"
-            # f"_kld_{self.hyperparameters['kld_weight']:1.0f}"
-            f"_mmd_{self.hyperparameters['mmd_weight']:1.0f}"
-            # f"_alpha_{self.hyperparameters['alpha']:1.0f}"
+            f"_alpha_{self.hyperparameters['alpha']:1.0f}"
             f"_lambda_{self.hyperparameters['lambda']:1.0f}"
         )
 
@@ -297,15 +295,12 @@ class AutoEncoder(FileDirectory):
             self.model.add_metric(self.MMD, name="MMD", aggregation="mean")
 
             # prepare KLD for loss
-            kld_weight = self.hyperparameters["kld_weight"]
             alpha = self.hyperparameters["alpha"]
             KLD = self.KLD * (1 - alpha)
 
             # prepare MMD for loss
-            mmd_weight = self.hyperparameters["mmd_weight"]
-            MMD = mmd_weight * self.MMD
             lambda_ = self.hyperparameters["lambda"]
-            MMD *= alpha + lambda_ - 1
+            MMD = (alpha + lambda_ - 1) * self.MMD
 
             self.model.add_loss([KLD, MMD])
 
