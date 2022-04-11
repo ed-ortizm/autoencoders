@@ -39,6 +39,7 @@ def ax_tex(ax: plt.Axes, x: float, y: float, text: str) -> None:
 
 ###############################################################################
 def visual_history(
+    model_id: str,
     history: dict,
     hyperparameters: dict,
     figsize: tuple = (10, 10),
@@ -179,7 +180,7 @@ def visual_history(
     ###########################################################################
     FileDirectory().check_directory(save_to, exit=False)
 
-    file_name = (
+    file_name = (f"{model_id}-"
         f"ae_MSE_{hyperparameters['reconstruction_weight']:1d}_"
         f"MMD_{hyperparameters['lambda'] -1:1.0f}"
     )
