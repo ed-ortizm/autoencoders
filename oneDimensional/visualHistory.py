@@ -24,9 +24,9 @@ save_to = parser.get("directory", "save_to")
 save_format = parser.get("file", "save_format")
 
 for idx, location in enumerate(models_directories):
-
     ###########################################################################
-    print(f"Plot history of model {idx+1}", end="\r")
+    model_id = location.split("/")[-2]
+    print(f"[{model_id}] Plot history of model {idx+1}", end="\r")
 
     file_location = f"{location}/train_history.pkl"
 
@@ -36,6 +36,7 @@ for idx, location in enumerate(models_directories):
     [_, hyperparameters, history] = parameters
 
     visual_history(
+        model_id,
         history=history,
         hyperparameters=hyperparameters,
         save_to=f"{save_to}",
