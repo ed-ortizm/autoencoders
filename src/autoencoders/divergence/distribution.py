@@ -9,6 +9,7 @@ class Distribution:
 
     def __init__(self):
         pass
+
     ###########################################################################
     def exponential(self, number_samples: int, parameters: dict) -> np.array:
         """
@@ -27,11 +28,11 @@ class Distribution:
         dimension = len(parameters["scale"])
 
         samples = np.random.exponential(
-            parameters["scale"],
-            size=(number_samples, dimension)
+            parameters["scale"], size=(number_samples, dimension)
         )
 
         return samples
+
     ###########################################################################
     def gamma(self, number_samples: int, parameters: dict) -> np.array:
         """
@@ -46,18 +47,19 @@ class Distribution:
             array with samples from distribution
         """
 
-
         # make sure dimension is properly set
         dimension = len(parameters["shape"])
 
         assert len(parameters["scale"]) == dimension
 
         samples = np.random.gamma(
-            parameters["shape"], parameters["scale"],
-            size=(number_samples, dimension)
+            parameters["shape"],
+            parameters["scale"],
+            size=(number_samples, dimension),
         )
 
         return samples
+
     ###########################################################################
     def uniform(self, number_samples: int, parameters: dict) -> np.array:
         """
@@ -78,11 +80,13 @@ class Distribution:
         assert len(parameters["low"]) == dimension
 
         samples = np.random.uniform(
-            parameters["low"], parameters["high"],
-            size=(number_samples, dimension)
+            parameters["low"],
+            parameters["high"],
+            size=(number_samples, dimension),
         )
 
         return samples
+
     ###########################################################################
     def gaussian(self, number_samples: int, parameters: dict) -> np.array:
         """
@@ -109,6 +113,7 @@ class Distribution:
         )
 
         return samples
+
     ###########################################################################
     def normal(self, number_samples: int, dimension: int) -> np.array:
         """

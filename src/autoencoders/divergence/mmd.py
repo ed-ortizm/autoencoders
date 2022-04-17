@@ -1,8 +1,8 @@
-
 import numpy as np
 from scipy.stats import norm, gamma, uniform, expon, entropy
 
 from autoencoders.divergence.distribution import Distribution
+
 ###############################################################################
 class MMD(Distribution):
     """
@@ -10,7 +10,7 @@ class MMD(Distribution):
     multivariate normal distribution
     """
 
-    def __init__(self, prior_samples: int = 200, sigma_sqr: float=None):
+    def __init__(self, prior_samples: int = 200, sigma_sqr: float = None):
         """
         INPUT
             prior_samples: samples to draw from the multivariate normal
@@ -38,6 +38,7 @@ class MMD(Distribution):
         mmd = self.compute_mmd(in_samples)
 
         return mmd
+
     ###########################################################################
     def to_exponential(self, number_samples: int, parameters: dict) -> float:
         """
@@ -57,6 +58,7 @@ class MMD(Distribution):
         mmd = self.compute_mmd(in_samples)
 
         return mmd
+
     ###########################################################################
     def to_gamma(self, number_samples: int, parameters: dict) -> float:
         """
@@ -76,6 +78,7 @@ class MMD(Distribution):
         mmd = self.compute_mmd(in_samples)
 
         return mmd
+
     ###########################################################################
     def to_uniform(self, number_samples: int, parameters: dict) -> float:
         """
@@ -95,6 +98,7 @@ class MMD(Distribution):
         mmd = self.compute_mmd(in_samples)
 
         return mmd
+
     ###########################################################################
     def compute_mmd(self, in_samples: np.array) -> float:
         """
@@ -140,7 +144,7 @@ class MMD(Distribution):
         tiled_y = np.tile(y.reshape(1, y_size, dim), (x_size, 1, 1))
 
         z_diff = tiled_x - tiled_y
-        kernel = np.exp(-np.mean(z_diff ** 2, axis=2) / (2 * sigma_sqr))
+        kernel = np.exp(-np.mean(z_diff**2, axis=2) / (2 * sigma_sqr))
 
         return kernel
 
