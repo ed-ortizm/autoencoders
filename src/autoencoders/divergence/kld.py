@@ -31,7 +31,7 @@ class KLD:
         Compute KLD between Normal and gaussian distribution
 
         INPUT
-            mu: mena value of gaussian
+            mu: mean value of gaussian
             std: standard deviation of gaussian
 
         OUTPUT

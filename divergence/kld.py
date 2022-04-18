@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from sdss.superclasses import ConfigurationFile
-from autoencoders.divergence import KLD
+from autoencoders.divergence.kld import KLD
 
 ###############################################################################
 start_time = time.time()
@@ -28,7 +28,9 @@ for distribution in ["gaussian", "uniform", "gamma", "exponential"]:
 
     if distribution == "gaussian":
 
-        divergence = kld.to_gaussian(parameters)
+        divergence = kld.to_gaussian(
+            mu=parameters["mean"], std=parameters["standard_deviation"]
+        )
 
         print(divergence)
 

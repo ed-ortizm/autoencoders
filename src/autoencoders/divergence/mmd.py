@@ -10,35 +10,14 @@ class MMD(Distribution):
     multivariate normal distribution
     """
 
-    def __init__(self, prior_samples: int = 200, sigma_sqr: float = None):
+    def __init__(self, number_prior_samples: int = 1000):
         """
         INPUT
-            prior_samples: samples to draw from the multivariate normal
-            sigma_sqr: kernel width
+            number_prior_samples: samples to draw from the multivariate normal
         """
-        self.prior_samples = prior_samples
-        self.sigma_sqr = sigma_sqr
-
-    ###########################################################################
-    def to_gaussian(self, number_samples: int, parameters: dict) -> float:
-        """
-        Compute MMD between Normal and gaussian distribution
-
-        INPUT
-            number_samples: number of samples to draw from gaussian
-                distribution
-            parameters: parameters of gaussian distribution
-
-        OUTPUT
-            Maximun Mean Discrepancy to gaussian
-        """
-
-        in_samples = super().gaussian(number_samples, parameters)
-
-        mmd = self.compute_mmd(in_samples)
-
-        return mmd
-
+        
+        self.prior_samples = super().normal(number_prior_samples)
+        
     ###########################################################################
     def to_exponential(self, number_samples: int, parameters: dict) -> float:
         """
@@ -100,7 +79,34 @@ class MMD(Distribution):
         return mmd
 
     ###########################################################################
-    def compute_mmd(self, in_samples: np.array) -> float:
+    def to_gaussian(self,
+        number_samples: int, mu:float=0., std:float=1., sigma_sqrt: float = None
+    ) -> float:
+        """
+        Compute MMD between Normal and gaussian distribution
+
+        INPUT
+            number_samples: number of samples to draw from gaussian
+                distribution
+            mu: mean value of gaussian
+            std: standard deviation of gaussian
+            sigma_sqrt: kernel width
+
+        OUTPUT
+            Maximun Mean Discrepancy to gaussian
+        """
+
+        if sigma_sqrt == None:
+            sigma_sqrt = 2.
+            
+        in_samples = super().gaussian(number_samples=number_samples, mu=mu, std=std)
+
+        mmd = self.compute_mmd(in_samples=in_samples, sigma_sqrt=sigma_sqrt)
+
+        return mmd, in_samples
+
+    ###########################################################################
+    def compute_mmd(self, in_samples: np.array, sigma_sqrt:float = None) -> float:
         """
         INPUT
             in_samples: samples from a distirubution used to compute its
@@ -109,20 +115,16 @@ class MMD(Distribution):
             Maximun Mean Discrepancy of in_samples to normal distribution
         """
 
-        dim = in_samples.shape[1]
-
-        if self.sigma_sqr == None:
-            sigma_sqr = 2 / dim
-
-        prior_samples = super().normal(self.prior_samples, dim)
+        if sigma_sqrt == None:
+            sigma_sqrt = 2.
 
         prior_kernel = self.compute_kernel(
-            prior_samples, prior_samples, sigma_sqr
+            self.prior_samples, self.prior_samples, sigma_sqrt
         )
 
-        in_kernel = self.compute_kernel(in_samples, in_samples, sigma_sqr)
+        in_kernel = self.compute_kernel(in_samples, in_samples, sigma_sqrt)
 
-        mix_kernel = self.compute_kernel(prior_samples, in_samples, sigma_sqr)
+        mix_kernel = self.compute_kernel(self.prior_samples, in_samples, sigma_sqrt)
 
         mmd = (
             np.mean(prior_kernel)
@@ -133,18 +135,21 @@ class MMD(Distribution):
         return mmd
 
     ###########################################################################
-    def compute_kernel(self, x, y, sigma_sqr):
+    def compute_kernel(self, x, y, sigma_sqrt):
+
+        if sigma_sqrt == None:
+            sigma_sqrt = 2.
 
         x_size = x.shape[0]
         y_size = y.shape[0]
-        dim = x.shape[1]
+        dim = 1
 
         tiled_x = np.tile(x.reshape(x_size, 1, dim), (1, y_size, 1))
 
         tiled_y = np.tile(y.reshape(1, y_size, dim), (x_size, 1, 1))
 
         z_diff = tiled_x - tiled_y
-        kernel = np.exp(-np.mean(z_diff**2, axis=2) / (2 * sigma_sqr))
+        kernel = np.exp(-np.mean(z_diff**2, axis=2) / (2 * sigma_sqrt))
 
         return kernel
 
