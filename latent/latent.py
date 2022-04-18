@@ -36,23 +36,22 @@ check = FileDirectory()
 # Handle configuration file
 configuration = ConfigurationFile()
 ###############################################################################
-# # set the number of cores to use per model in each worker
-# jobs = parser.getint("configuration", "cores_per_worker")
-# config = tf.compat.v1.ConfigProto(
-#     intra_op_parallelism_threads=jobs,
-#     inter_op_parallelism_threads=jobs,
-#     allow_soft_placement=True,
-#     device_count={"CPU": jobs},
-# )
-# session = tf.compat.v1.Session(config=config)
+# set the number of cores to use per model in each worker
+jobs = parser.getint("configuration", "cores_per_worker")
+config = tf.compat.v1.ConfigProto(
+    intra_op_parallelism_threads=jobs,
+    inter_op_parallelism_threads=jobs,
+    allow_soft_placement=True,
+    device_count={"CPU": jobs},
+)
+session = tf.compat.v1.Session(config=config)
 ###############################################################################
 # load data
 meta = parser.get("common", "meta")
 bin_id = parser.get("common", "bin")
 
 model_id = parser.get("file", "model")
-print(f"Load model {model_id}")
-print(f"Model train on: \n {meta} \n {bin_id}", end="\n")
+print(f"Load model {model_id} trained on:\n{meta}:{bin_id}", end="\n")
 
 model_directory = parser.get("directory", "model")
 model_directory = f"{model_directory}/{model_id}"
@@ -65,10 +64,12 @@ data_directory = parser.get("directory", "data")
 fluxes_name = parser.get("file","fluxes")
 
 fluxes = np.load(f"{data_directory}/{fluxes_name}")
-print(fluxes.shape)
 ###############################################################################
+print(f"Compute and save latent representation of data", end="\n")
+latent_representation = model.encode(fluxes)
+np.save("/home/edgar/latent.npy", latent_representation)
 ###############################################################################
-# session.close()
+session.close()
 ###############################################################################
 # save_config_to = f"{data_directory}/"
 # with open(f"{save_config_to}/{config_file_name}", "w") as config_file:
