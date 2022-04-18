@@ -1,6 +1,6 @@
-
 import numpy as np
 from scipy.stats import norm, gamma, uniform, expon, entropy
+
 ###############################################################################
 class KLD:
     """
@@ -8,10 +8,11 @@ class KLD:
     distribution and a normal distribution
     """
 
-    def __init__(self,
-        x_min: float=-1.,
-        x_max: float=1.,
-        grid_size: int=1000
+    def __init__(
+        self,
+        x_min: float = -10.0,
+        x_max: float = 10.0,
+        grid_size: int = 1000,
     ):
         """
         INPUT
@@ -25,25 +26,23 @@ class KLD:
         self.prior = norm.pdf(self.x)
 
     ###########################################################################
-    def to_gaussian(self, parameters: dict) -> float:
+    def to_gaussian(self, mu: float = 0.0, std: float = 1.0) -> float:
         """
         Compute KLD between Normal and gaussian distribution
 
         INPUT
-            parameters: parameters of gaussian distribution
+            mu: mean value of gaussian
+            std: standard deviation of gaussian
 
         OUTPUT
-            KLD to gaussian
+            kld: KLD to gaussian
         """
-        Q = norm.pdf(
-            self.x,
-            loc=parameters["mean"],
-            scale=parameters["standard_deviation"]
-        )
+        Q = norm.pdf(self.x, loc=mu, scale=std)
 
         kld = entropy(self.prior, Q)
 
-        return kld
+        return kld, Q
+
     ###########################################################################
     def to_exponential(self, parameters: dict) -> float:
         """
@@ -56,9 +55,7 @@ class KLD:
             KLD to exponential
         """
         Q = expon.pdf(
-            self.x,
-            loc=parameters["location"],
-            scale=parameters["scale"]
+            self.x, loc=parameters["location"], scale=parameters["scale"]
         )
 
         kld = entropy(self.prior, Q)
@@ -80,12 +77,13 @@ class KLD:
             self.x,
             loc=parameters["location"],
             scale=parameters["scale"],
-            a=parameters["a"]
+            a=parameters["a"],
         )
 
         kld = entropy(self.prior, Q)
 
         return kld
+
     ###########################################################################
     def to_uniform(self, parameters: dict) -> float:
         """
@@ -99,9 +97,7 @@ class KLD:
         """
 
         Q = uniform.pdf(
-            self.x,
-            loc=parameters["low"],
-            scale=parameters["scale"]
+            self.x, loc=parameters["low"], scale=parameters["scale"]
         )
 
         kld = entropy(self.prior, Q)

@@ -6,7 +6,7 @@ import time
 import numpy as np
 
 from sdss.superclasses import ConfigurationFile
-from autoencoders.divergence import MMD
+from autoencoders.divergence.mmd import MMD
 
 ###############################################################################
 start_time = time.time()
