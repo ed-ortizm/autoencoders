@@ -50,11 +50,15 @@ configuration = ConfigurationFile()
 # load data
 meta = parser.get("common", "meta")
 bin_id = parser.get("common", "bin")
-model_id = parser.getint("file", "model_id")
+
+model_id = parser.get("file", "model")
 print(f"Load model {model_id}")
 print(f"Model train on: \n {meta} \n {bin_id}", end="\n")
-model_location = f"{model_directory}/{model_id}"
-model = AutoEncoder(reload=True, reload_from=model_location)
+
+model_directory = parser.get("directory", "model")
+model_directory = f"{model_directory}/{model_id}"
+
+model = AutoEncoder(reload=True, reload_from=model_directory)
 ###############################################################################
 # session.close()
 ###############################################################################
