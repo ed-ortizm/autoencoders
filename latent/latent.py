@@ -60,6 +60,15 @@ model_directory = f"{model_directory}/{model_id}"
 
 model = AutoEncoder(reload=True, reload_from=model_directory)
 ###############################################################################
+print(f"Load data", end="\n")
+
+data_directory = parser.get("directory", "data")
+fluxes_name = parser.get("file","fluxes")
+
+fluxes = np.load(f"{data_directory}/{fluxes_name}")
+print(fluxes.shape)
+###############################################################################
+###############################################################################
 # session.close()
 ###############################################################################
 # save_config_to = f"{data_directory}/"
