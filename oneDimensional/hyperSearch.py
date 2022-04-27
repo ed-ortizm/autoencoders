@@ -66,7 +66,7 @@ if __name__ == "__main__":
     ###########################################################################
     print(f"Get hyperparameters grid", end="\n")
     grid = config_handler.section_to_dictionary(
-        parser.items("param-search"), value_separators=["_"]
+        parser.items("param-search"), value_separators=["_", ","]
     )
     ###########################################################################
     # Set reconstruction weight as list
@@ -78,7 +78,11 @@ if __name__ == "__main__":
     if type(grid["reconstruction_weight"]) != type([]):
 
         grid["reconstruction_weight"] = [
-            grid["reconstruction_weight"], input_dimensions
+            grid["reconstruction_weight"]*input_dimensions
+        ]
+    else:
+        grid["reconstruction_weight"] = [
+           n * input_dimensions for n in grid["reconstruction_weight"]
         ]
     ###########################################################################
     # Set lambdas
@@ -94,7 +98,7 @@ if __name__ == "__main__":
 
     if grid["lambda"] == "uniform":
 
-        lambdas = np.arange(0, 1020, 20)
+        lambdas = np.arange(0, 1100, 100)
         # lambda must be larger than 1
         lambdas[0] = 2
 
