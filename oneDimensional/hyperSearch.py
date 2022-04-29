@@ -112,6 +112,8 @@ if __name__ == "__main__":
 
     #######################################################################
     model_directory = parser.get("directory", "models")
+    latent_dimensions = parser.getint("architecture", "latent_dimensions")
+    model_directory = f"{model_directory}/latent_{latent_dimensions:02d}"
     ###########################################################################
     number_processes = parser.getint("configuration", "number_processes")
     cores_per_worker = parser.getint("configuration", "cores_per_worker")
