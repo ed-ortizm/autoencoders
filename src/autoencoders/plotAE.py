@@ -120,12 +120,23 @@ def visual_history(
 
     ###########################################################################
     # mse
+
+    if "." in str(hyperparameters['reconstruction_weight']):
+
+        mse_text = str(hyperparameters['reconstruction_weight']).split(".")
+        mse_text = [int(x) for x in mse_text[-2:]]
+        mse_text = f"{mse_text[0]:02d}_{mse_text[0]}"
+
+    else:
+
+        mse_text = f"{hyperparameters['reconstruction_weight']:02d}"
+
     ax_mse.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
     ax_tex(
         ax_mse,
         x=0.5,
         y=0.8,
-        text=f"MSE: {hyperparameters['reconstruction_weight']:2d}",
+        text=f"MSE: {mse_text}",
     )
 
     ax_mse.plot(epochs, mse, "--o", color="black", linewidth=linewidth)
@@ -181,8 +192,8 @@ def visual_history(
     FileDirectory().check_directory(save_to, exit=False)
 
     file_name = (f"{model_id}-"
-        f"ae_MSE_{hyperparameters['reconstruction_weight']:1d}_"
-        f"MMD_{hyperparameters['lambda'] -1:1.0f}"
+        f"ae_MSE_{mse_text}_"
+        f"MMD_{hyperparameters['lambda']:1.0f}"
     )
 
     fig.savefig(f"{save_to}/{file_name}.{save_format}")
