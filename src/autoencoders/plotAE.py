@@ -169,7 +169,7 @@ def visual_history(
     ax_mmd.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
     ax_tex(
-        ax_mmd, x=0.5, y=0.8, text=f"MMD: {hyperparameters['lambda'] -1:1.0f}"
+        ax_mmd, x=0.5, y=0.8, text=f"MMD: {hyperparameters['lambda']:1.0f}"
     )
 
     ax_mmd.plot(epochs, mmd, "--o", color="black", linewidth=linewidth)
