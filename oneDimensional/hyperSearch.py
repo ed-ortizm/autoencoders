@@ -98,7 +98,7 @@ if __name__ == "__main__":
 
     if grid["lambda"] == "uniform":
 
-        lambdas = np.arange(0, 1100, 100)
+        lambdas = np.arange(0, 1020, 20)
         # lambda must be larger than 1
         lambdas[0] = 2
 
