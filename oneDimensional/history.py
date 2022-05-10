@@ -1,16 +1,17 @@
+"""Get plots from train history of a model"""
+
 from configparser import ConfigParser, ExtendedInterpolation
 import glob
 import time
 import pickle
 
 from autoencoders.plotAE import visual_history
-from sdss.superclasses import FileDirectory
 
 ###############################################################################
 time_start = time.time()
 
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-parser_name = "visualHistory.ini"
+parser_name = "history.ini"
 parser.read(f"{parser_name}")
 ###############################################################################
 # get relevant directories
