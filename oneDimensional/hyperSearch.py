@@ -26,7 +26,8 @@ import time
 ###############################################################################
 import numpy as np
 
-from sdss.superclasses import ConfigurationFile, FileDirectory
+from sdss.utils.managefiles import FileDirectory
+from sdss.utils.configfile import ConfigurationFile
 from autoencoders import hyperSearch
 
 ###############################################################################

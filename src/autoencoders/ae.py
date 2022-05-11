@@ -12,7 +12,7 @@ from keras.layers import Dense
 
 ###############################################################################
 from autoencoders.customObjects import MyCustomLoss, SamplingLayer
-from sdss.superclasses import FileDirectory
+from sdss.utils.managefiles import FileDirectory
 
 ###############################################################################
 class AutoEncoder(FileDirectory):
