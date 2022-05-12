@@ -22,7 +22,8 @@ import numpy as np
 import tensorflow as tf
 
 from autoencoders.ae import AutoEncoder
-from sdss.superclasses import FileDirectory, ConfigurationFile
+from sdss.utils.managefiles import FileDirectory
+from sdss.utils.configfile import ConfigurationFile
 
 ###############################################################################
 start_time = time.time()
@@ -56,7 +57,7 @@ model = AutoEncoder(reload=True, reload_from=model_directory)
 print(f"Load data", end="\n")
 
 data_directory = parser.get("directory", "data")
-FileDirectory().check_directory(data_directory, exit=True)
+FileDirectory().check_directory(data_directory, exit_program=True)
 
 fluxes_name = parser.get("file","fluxes")
 fluxes = np.load(f"{data_directory}/{fluxes_name}")
@@ -67,7 +68,7 @@ latent_representation = model.encode(fluxes)
 
 save_data_to = parser.get("directory", "latent")
 save_data_to = f"{save_data_to}/{model_id}"
-FileDirectory().check_directory(save_data_to, exit=False)
+FileDirectory().check_directory(save_data_to, exit_program=False)
 
 np.save(f"{save_data_to}/latent_{bin_id}.npy", latent_representation)
 ###############################################################################

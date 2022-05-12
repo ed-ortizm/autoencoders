@@ -239,7 +239,7 @@ class AutoEncoder(FileDirectory):
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
 
-        super().check_directory(save_to, exit=False)
+        super().check_directory(save_to, exit_program=False)
 
         self.model.save(save_to)
         #######################################################################

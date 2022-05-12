@@ -6,7 +6,7 @@ from matplotlib.ticker import (
     AutoMinorLocator,
 )
 
-from sdss.superclasses import FileDirectory
+from sdss.utils.managefiles import FileDirectory
 
 ###############################################################################
 def ax_tex(ax: plt.Axes, x: float, y: float, text: str) -> None:
@@ -189,7 +189,7 @@ def visual_history(
     ax_mmd.xaxis.set_major_formatter(FormatStrFormatter("% 1.0f"))
     fig.legend([mmd_line], ["validation"], loc="center")
     ###########################################################################
-    FileDirectory().check_directory(save_to, exit=False)
+    FileDirectory().check_directory(save_to, exit_program=False)
 
     file_name = (f"{model_id}-"
         f"ae_MSE_{mse_text}_"
