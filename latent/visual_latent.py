@@ -3,7 +3,7 @@ from configparser import ConfigParser, ExtendedInterpolation
 import time
 
 import numpy as np
-# import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt
 import pandas as pd
 import seaborn as sns
 
@@ -68,9 +68,9 @@ print(f"Save pair plots of latent representation", end="\n")
 size = ConfigurationFile().entry_to_list(
     parser.get("plot", "size"), float, ","
 )
+size = tuple(size)
 
-# plt.rcParams["figure.figsize"] = size
-# plt.rcParams["figure.autolayout"] = True
+fig, ax = plt.subplots(figsize=size, tight_layout=True)
 
 hue = parser.get("plot", "hue")
 alpha = parser.getfloat("plot", "alpha")
@@ -90,8 +90,6 @@ for idx in bin_df.index:
     elif "AGN" in bin_df.loc[idx, "ABSSB"]:
         bin_df.loc[idx, "ABSSB"] = "AGN"
 
-
-
 for latent_x in range(number_variables):
 
     for latent_y in range(latent_x, number_variables):
@@ -99,21 +97,34 @@ for latent_x in range(number_variables):
         if latent_x == latent_y:
             continue
 
-        print(f"Plots in {latent_x:02d} vs {latent_y:02d}", end="\r")
+        print(f"Pair plots: {latent_x:02d} vs {latent_y:02d}", end="\r")
 
-        pair_plot = sns.scatterplot(
+        # pair_plot = sns.scatterplot(
+        sns.scatterplot(
             f"{latent_x:02d}Latent", f"{latent_y:02d}Latent",
-            data=bin_df, hue=hue, alpha=alpha
+            ax=ax, data=bin_df, hue=hue, alpha=alpha
         )
-
-        fig = pair_plot.get_figure()
 
         fig.savefig(
             f"{latent_directory}/"
             f"pair_{latent_x:02d}_{latent_y:02d}.{plot_format}"
         )
 
-        pair_plot.clear()
+        ax.clear()
+###############################################################################
+for metric in metrics:
+
+    print(f"Umap visualization: {metric}", end="\r")
+
+    pair_plot = sns.scatterplot(
+        f"{metric}_01", f"{metric}_02",
+        ax=ax, data=bin_df, hue=hue, alpha=alpha
+    )
+
+    fig.savefig(f"{latent_directory}/umap_{metric}.{plot_format}")
+
+    ax.clear()
+
 ###############################################################################
 print(f"Save configuration file", end="\n")
 
