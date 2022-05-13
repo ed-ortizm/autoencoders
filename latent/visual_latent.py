@@ -101,7 +101,7 @@ for latent_x in range(number_variables):
 
         # pair_plot = sns.scatterplot(
         sns.scatterplot(
-            f"{latent_x:02d}Latent", f"{latent_y:02d}Latent",
+            x=f"{latent_x:02d}Latent", y=f"{latent_y:02d}Latent",
             ax=ax, data=bin_df, hue=hue, alpha=alpha
         )
 
@@ -117,7 +117,7 @@ for metric in metrics:
     print(f"Umap visualization: {metric}", end="\r")
 
     pair_plot = sns.scatterplot(
-        f"{metric}_01", f"{metric}_02",
+        x=f"{metric}_01", y=f"{metric}_02",
         ax=ax, data=bin_df, hue=hue, alpha=alpha
     )
 
