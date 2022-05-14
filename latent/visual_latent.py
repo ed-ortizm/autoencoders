@@ -1,5 +1,6 @@
 """Do scatter plots of latent variables, including umap representation"""
 from configparser import ConfigParser, ExtendedInterpolation
+import glob
 import time
 
 import numpy as np
@@ -51,25 +52,6 @@ _ = [
 bin_id = parser.get("common", "bin")
 metrics = config.entry_to_list(parser.get("umap", "metrics"), str, ",")
 
-bin_df.dropna(inplace=True)
-
-hue = parser.get("plot", "hue")
-
-if hue == "ABSSB":
-    # create new set of classes
-    bin_df["ABSSB"] = bin_df["subClass"]
-
-    for idx in bin_df.index:
-
-        if "STARF" in bin_df.loc[idx, "ABSSB"]:
-            bin_df.loc[idx, "ABSSB"] = "STARFORMING"
-
-        elif "STARB" in bin_df.loc[idx, "ABSSB"]:
-            bin_df.loc[idx, "ABSSB"] = "STARBURST"
-
-        elif "AGN" in bin_df.loc[idx, "ABSSB"]:
-            bin_df.loc[idx, "ABSSB"] = "AGN"
-
 # set plot parameters
 
 size = ConfigurationFile().entry_to_list(
@@ -82,14 +64,20 @@ fig, ax = plt.subplots(figsize=size, tight_layout=True)
 alpha = parser.getfloat("plot", "alpha")
 plot_format = parser.get("plot", "format")
 
+number_latent_variables = None
+hues = ConfigurationFile().entry_to_list(
+    parser.get("plot", "hues"), str, ","
+)
 
-for idx, latent_directory in enumerate(latent_directories)
+show_undefined = parser.getboolean("plot", "show_undefined")
+
+for idx, latent_directory in enumerate(latent_directories):
 
     latent = np.load(f"{latent_directory}/{latent_name}")
-    number_variables = latent.shape[1]
+    number_latent_variables = latent.shape[1]
 
     # load latent representation to data frame
-    for idx in range(number_variables):
+    for idx in range(number_latent_variables):
         bin_df[f"{idx:02d}Latent"] = latent[:, idx]
 
     # load umap embedding
@@ -102,41 +90,52 @@ for idx, latent_directory in enumerate(latent_directories)
 
     print(f"Save pair plots of latent representation", end="\n")
 
+    for hue in hues:
 
-    for latent_x in range(number_variables):
+        if show_undefined is True:
+            plot_df = bin_df[bin_df[hue]!="undefined"]
+        else:
+            plot_df = bin_df
 
-        for latent_y in range(latent_x, number_variables):
 
-            if latent_x == latent_y:
-                continue
+        for latent_x in range(number_latent_variables):
 
-            print(f"Pair plots: {latent_x:02d} vs {latent_y:02d}", end="\r")
+            for latent_y in range(latent_x, number_latent_variables):
 
-            # pair_plot = sns.scatterplot(
-            sns.scatterplot(
-                x=f"{latent_x:02d}Latent", y=f"{latent_y:02d}Latent",
-                ax=ax, data=bin_df, hue=hue, alpha=alpha
+                if latent_x == latent_y:
+                    continue
+
+                print(f"Pair plots: {latent_x:02d} vs {latent_y:02d}", end="\r")
+
+                # pair_plot = sns.scatterplot(
+                sns.scatterplot(
+                    x=f"{latent_x:02d}Latent", y=f"{latent_y:02d}Latent",
+                    ax=ax, data=plot_df, hue=hue, alpha=alpha
+                )
+
+                fig.savefig(
+                    f"{latent_directory}/"
+                    f"pair_{latent_x:02d}_{latent_y:02d}_"
+                    f"{hue}_{show_undefined}.{plot_format}"
+                )
+
+                ax.clear()
+        ###########################################################################
+        for metric in metrics:
+
+            print(f"Umap visualization: {metric}", end="\r")
+
+            pair_plot = sns.scatterplot(
+                x=f"{metric}_01", y=f"{metric}_02",
+                ax=ax, data=plot_df, hue=hue, alpha=alpha
             )
 
             fig.savefig(
-                f"{latent_directory}/"
-                f"pair_{latent_x:02d}_{latent_y:02d}.{plot_format}"
+                f"{latent_directory}/umap_{metric}"
+                f"{hue}_{show_undefined}.{plot_format}"
             )
 
             ax.clear()
-    ###########################################################################
-    for metric in metrics:
-
-        print(f"Umap visualization: {metric}", end="\r")
-
-        pair_plot = sns.scatterplot(
-            x=f"{metric}_01", y=f"{metric}_02",
-            ax=ax, data=bin_df, hue=hue, alpha=alpha
-        )
-
-        fig.savefig(f"{latent_directory}/umap_{metric}.{plot_format}")
-
-        ax.clear()
 
     ###########################################################################
     print(f"Save configuration file", end="\n")
