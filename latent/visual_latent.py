@@ -32,38 +32,45 @@ specobjid = np.load(f"{bin_directory}/{specobjid_name}")
 bin_df = science_df.loc[specobjid[:, 1]]
 del science_df
 ###############################################################################
-print(f"Load latent representation", end="\n")
+print(f"Load embedding and latent representations", end="\n")
 
 latent_directory = parser.get("directory", "latent")
+latent_directories = glob.glob(f"{latent_directory}/*/")
+
+models_id = [model_id.split("/")[-2] for model_id in latent_directories]
 
 latent_name = parser.get("file", "latent")
-FileDirectory().file_exists(
-    f"{latent_directory}/{latent_name}",
-    exit_program=True
-)
 
-latent = np.load(f"{latent_directory}/{latent_name}")
-number_variables = latent.shape[1]
+_ = [
+    FileDirectory().file_exists(
+        f"{latent_location}/{latent_name}",
+        exit_program=True
+    ) for latent_location in latent_directories
+]
 
-for idx in range(number_variables):
-    bin_df[f"{idx:02d}Latent"] = latent[:, idx]
-
-###############################################################################
-print(f"Load umap embedding", end="\n")
-metrics = config.entry_to_list(parser.get("umap", "metrics"), str, ",")
 bin_id = parser.get("common", "bin")
-
-for metric in metrics:
-
-    embedding = np.load(f"{latent_directory}/umap_{metric}_{bin_id}.npy")
-
-    bin_df[f"{metric}_01"] = embedding[:, 0]
-    bin_df[f"{metric}_02"] = embedding[:, 1]
-
+metrics = config.entry_to_list(parser.get("umap", "metrics"), str, ",")
 
 bin_df.dropna(inplace=True)
-# print(bin_df.columns, bin_df.shape)
-print(f"Save pair plots of latent representation", end="\n")
+
+hue = parser.get("plot", "hue")
+
+if hue == "ABSSB":
+    # create new set of classes
+    bin_df["ABSSB"] = bin_df["subClass"]
+
+    for idx in bin_df.index:
+
+        if "STARF" in bin_df.loc[idx, "ABSSB"]:
+            bin_df.loc[idx, "ABSSB"] = "STARFORMING"
+
+        elif "STARB" in bin_df.loc[idx, "ABSSB"]:
+            bin_df.loc[idx, "ABSSB"] = "STARBURST"
+
+        elif "AGN" in bin_df.loc[idx, "ABSSB"]:
+            bin_df.loc[idx, "ABSSB"] = "AGN"
+
+# set plot parameters
 
 size = ConfigurationFile().entry_to_list(
     parser.get("plot", "size"), float, ","
@@ -72,64 +79,70 @@ size = tuple(size)
 
 fig, ax = plt.subplots(figsize=size, tight_layout=True)
 
-hue = parser.get("plot", "hue")
 alpha = parser.getfloat("plot", "alpha")
 plot_format = parser.get("plot", "format")
 
-# create new set of classes
-bin_df["ABSSB"] = bin_df["subClass"]
 
-for idx in bin_df.index:
+for idx, latent_directory in enumerate(latent_directories)
 
-    if "STARF" in bin_df.loc[idx, "ABSSB"]:
-        bin_df.loc[idx, "ABSSB"] = "STARFORMING"
+    latent = np.load(f"{latent_directory}/{latent_name}")
+    number_variables = latent.shape[1]
 
-    elif "STARB" in bin_df.loc[idx, "ABSSB"]:
-        bin_df.loc[idx, "ABSSB"] = "STARBURST"
+    # load latent representation to data frame
+    for idx in range(number_variables):
+        bin_df[f"{idx:02d}Latent"] = latent[:, idx]
 
-    elif "AGN" in bin_df.loc[idx, "ABSSB"]:
-        bin_df.loc[idx, "ABSSB"] = "AGN"
+    # load umap embedding
+    for metric in metrics:
 
-for latent_x in range(number_variables):
+        embedding = np.load(f"{latent_directory}/umap_{metric}_{bin_id}.npy")
 
-    for latent_y in range(latent_x, number_variables):
+        bin_df[f"{metric}_01"] = embedding[:, 0]
+        bin_df[f"{metric}_02"] = embedding[:, 1]
 
-        if latent_x == latent_y:
-            continue
+    print(f"Save pair plots of latent representation", end="\n")
 
-        print(f"Pair plots: {latent_x:02d} vs {latent_y:02d}", end="\r")
 
-        # pair_plot = sns.scatterplot(
-        sns.scatterplot(
-            x=f"{latent_x:02d}Latent", y=f"{latent_y:02d}Latent",
+    for latent_x in range(number_variables):
+
+        for latent_y in range(latent_x, number_variables):
+
+            if latent_x == latent_y:
+                continue
+
+            print(f"Pair plots: {latent_x:02d} vs {latent_y:02d}", end="\r")
+
+            # pair_plot = sns.scatterplot(
+            sns.scatterplot(
+                x=f"{latent_x:02d}Latent", y=f"{latent_y:02d}Latent",
+                ax=ax, data=bin_df, hue=hue, alpha=alpha
+            )
+
+            fig.savefig(
+                f"{latent_directory}/"
+                f"pair_{latent_x:02d}_{latent_y:02d}.{plot_format}"
+            )
+
+            ax.clear()
+    ###########################################################################
+    for metric in metrics:
+
+        print(f"Umap visualization: {metric}", end="\r")
+
+        pair_plot = sns.scatterplot(
+            x=f"{metric}_01", y=f"{metric}_02",
             ax=ax, data=bin_df, hue=hue, alpha=alpha
         )
 
-        fig.savefig(
-            f"{latent_directory}/"
-            f"pair_{latent_x:02d}_{latent_y:02d}.{plot_format}"
-        )
+        fig.savefig(f"{latent_directory}/umap_{metric}.{plot_format}")
 
         ax.clear()
-###############################################################################
-for metric in metrics:
 
-    print(f"Umap visualization: {metric}", end="\r")
+    ###########################################################################
+    print(f"Save configuration file", end="\n")
 
-    pair_plot = sns.scatterplot(
-        x=f"{metric}_01", y=f"{metric}_02",
-        ax=ax, data=bin_df, hue=hue, alpha=alpha
-    )
-
-    fig.savefig(f"{latent_directory}/umap_{metric}.{plot_format}")
-
-    ax.clear()
-
-###############################################################################
-print(f"Save configuration file", end="\n")
-
-with open(f"{latent_directory}/{config_file_name}", "w") as config_file:
-    parser.write(config_file)
+    with open(f"{latent_directory}/{config_file_name}", "w") as config_file:
+        parser.write(config_file)
 ###############################################################################
 finish_time = time.time()
 print(f"\nRun time: {finish_time - start_time:.2f}")
