@@ -1,20 +1,17 @@
-import os
+"""Define class to set and reload autoencoders and variational AEs"""
 import pickle
 
 ###############################################################################
-import matplotlib
-import matplotlib.pyplot as plt
 import numpy as np
 
 import tensorflow as tf
 from tensorflow import keras
 from keras.layers import Dense
 
-###############################################################################
 from autoencoders.customObjects import MyCustomLoss, SamplingLayer
 from sdss.utils.managefiles import FileDirectory
 
-###############################################################################
+
 class AutoEncoder(FileDirectory):
     """
     Create an AE model using the keras functional API, where custom
@@ -40,6 +37,8 @@ class AutoEncoder(FileDirectory):
             reload:
             reload_from:
         """
+
+        super().__init__()
 
         if reload is True:
 
@@ -84,7 +83,11 @@ class AutoEncoder(FileDirectory):
             self._build_model()
 
     ###########################################################################
-    def get_architecture_and_model_str(self) -> str:
+    def get_architecture_and_model_str(self) -> list:
+        """
+            Retrieve model architecture and name, e.g:
+            [512_256_10_256_512, infoVae_rec_3458_alpha_1_lambda_10
+        """
 
         architecture_str = self.architecture["encoder"]
         architecture_str += [self.architecture["latent_dimensions"]]
@@ -125,6 +128,7 @@ class AutoEncoder(FileDirectory):
 
     ###########################################################################
     def train(self, spectra: np.array) -> keras.callbacks.History:
+        """Train model with spectra array"""
 
         stopping_criteria = keras.callbacks.EarlyStopping(
             monitor="val_loss",
@@ -220,7 +224,7 @@ class AutoEncoder(FileDirectory):
         """
 
         if z.ndim == 1:
-            coding = z.reshape(1, -1)
+            z = z.reshape(1, -1)
 
         spectra = self.decoder.predict(z)
 
@@ -228,12 +232,14 @@ class AutoEncoder(FileDirectory):
 
     ###########################################################################
     def summary(self):
+        """Return Keras buitl int summary of Model class"""
         self.encoder.summary()
         self.decoder.summary()
         self.model.summary()
 
     ###########################################################################
     def save_model(self, save_to: str) -> None:
+        """Save model with tf and Keras built in fucntionality"""
 
         # There is no need to save the encoder and or decoder
         # keras.models.Model.sumodules instance has them
@@ -362,7 +368,7 @@ class AutoEncoder(FileDirectory):
                 tf.stack([200, self.architecture["latent_dimensions"]])
             )
 
-            self.MMD = self.compute_mmd(true_samples, z)
+            self.MMD = AutoEncoder.compute_mmd(true_samples, z)
 
         else:
 
@@ -377,7 +383,9 @@ class AutoEncoder(FileDirectory):
         self.encoder = keras.Model(encoder_input, z, name="encoder")
 
     ###########################################################################
-    def compute_kernel(self, x, y):
+    @staticmethod
+    def compute_kernel(x, y):
+        """Weight of moments between samples of distributions"""
 
         x_size = tf.shape(x)[0]
         y_size = tf.shape(y)[0]
@@ -399,11 +407,13 @@ class AutoEncoder(FileDirectory):
         return kernel
 
     ###########################################################################
-    def compute_mmd(self, x, y):
+    @staticmethod
+    def compute_mmd(x, y):
+        """Maximun Mean Discrepancy between input samples"""
 
-        x_kernel = self.compute_kernel(x, x)
-        y_kernel = self.compute_kernel(y, y)
-        xy_kernel = self.compute_kernel(x, y)
+        x_kernel = AutoEncoder.compute_kernel(x, x)
+        y_kernel = AutoEncoder.compute_kernel(y, y)
+        xy_kernel = AutoEncoder.compute_kernel(x, y)
 
         mmd = (
             tf.reduce_mean(x_kernel)
@@ -438,15 +448,15 @@ class AutoEncoder(FileDirectory):
         for layer_index, number_units in enumerate(block_units):
 
             # in the first iteration, x is the input tensor in the block
-            x = self._get_next_dense_layer_output(
+            x = AutoEncoder._get_next_dense_layer_output(
                 x, layer_index, number_units, block
             )
 
         return x
 
     ###########################################################################
+    @staticmethod
     def _get_next_dense_layer_output(
-        self,
         input_tensor: tf.Tensor,  # the output of the previous layer
         layer_index: int,
         number_units: int,

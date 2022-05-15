@@ -3,6 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from autoencoders.divergence.kld import KLD
+
 ##############################################################################
 stds = np.array([0.25, 0.5, 1, 4, 9, 16]).reshape(2, 3)
 

@@ -1,5 +1,6 @@
 """Train a single AutoEncoder"""
 import os
+
 ###############################################################################
 from configparser import ConfigParser, ExtendedInterpolation
 import time
