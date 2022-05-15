@@ -1,5 +1,8 @@
+"""Visuals for KLD divergence between a normal and Gaussian distribution"""
 import matplotlib.pyplot as plt
+import numpy as np
 
+from autoencoders.divergence.kld import KLD
 ##############################################################################
 stds = np.array([0.25, 0.5, 1, 4, 9, 16]).reshape(2, 3)
 
@@ -11,6 +14,9 @@ fig, axs = plt.subplots(
     sharey=True,
     tight_layout=True,
 )
+
+kld = KLD()
+
 for idx_row, ax_row in enumerate(axs):
 
     for idx_col, ax in enumerate(ax_row):

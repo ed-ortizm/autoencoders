@@ -1,5 +1,8 @@
+"""Visuals of MMD divergence"""
 import matplotlib.pyplot as plt
+import numpy as np
 
+import autoencoders
 ##############################################################################
 mmd = autoencoders.divergence.mmd.MMD(number_prior_samples=1000)
 

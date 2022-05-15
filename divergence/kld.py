@@ -1,11 +1,8 @@
-###############################################################################
+"""Explore KLD divergence"""
 from configparser import ConfigParser, ExtendedInterpolation
 import time
 
-###############################################################################
-import numpy as np
-
-from sdss.superclasses import ConfigurationFile
+from sdss.utils.configfile import ConfigurationFile
 from autoencoders.divergence.kld import KLD
 
 ###############################################################################
