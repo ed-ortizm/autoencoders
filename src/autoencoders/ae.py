@@ -128,7 +128,6 @@ class AutoEncoder(FileDirectory):
 
         stopping_criteria = keras.callbacks.EarlyStopping(
             monitor="val_loss",
-
             patience=self.hyperparameters["early_stop_patience"],
             verbose=self.hyperparameters["verbose_early_stop"],
             mode="min",

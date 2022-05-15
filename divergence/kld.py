@@ -23,7 +23,7 @@ kld = KLD(start, end, grid_size)
 for distribution in ["gaussian", "uniform", "gamma", "exponential"]:
 
     parameters = ConfigurationFile().section_to_dictionary(
-        parser.items(distribution), value_separators = [","]
+        parser.items(distribution), value_separators=[","]
     )
 
     if distribution == "gaussian":

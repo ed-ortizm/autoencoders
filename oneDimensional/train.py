@@ -22,6 +22,7 @@ from tensorflow import keras
 
 from autoencoders.ae import AutoEncoder
 from sdss.superclasses import ConfigurationFile, FileDirectory
+
 ###############################################################################
 ti = time.time()
 ###############################################################################
@@ -85,7 +86,8 @@ if save_reconstruction is True:
     observation = np.load(f"{data_directory}/{observation_name}")
     reconstruction = vae.reconstruct(observation)
     np.save(
-        f"{data_directory}/reconstructions_{long_model_name}.npy", reconstruction
+        f"{data_directory}/reconstructions_{long_model_name}.npy",
+        reconstruction,
     )
 
 # close tf session to free resources

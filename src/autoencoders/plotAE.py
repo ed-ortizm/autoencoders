@@ -121,9 +121,9 @@ def visual_history(
     ###########################################################################
     # mse
 
-    if "." in str(hyperparameters['reconstruction_weight']):
+    if "." in str(hyperparameters["reconstruction_weight"]):
 
-        mse_text = str(hyperparameters['reconstruction_weight']).split(".")
+        mse_text = str(hyperparameters["reconstruction_weight"]).split(".")
         mse_text = [int(x) for x in mse_text[-2:]]
         mse_text = f"{mse_text[0]:02d}_{mse_text[0]}"
 
@@ -132,12 +132,7 @@ def visual_history(
         mse_text = f"{hyperparameters['reconstruction_weight']:02d}"
 
     ax_mse.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
-    ax_tex(
-        ax_mse,
-        x=0.5,
-        y=0.8,
-        text=f"MSE: {mse_text}",
-    )
+    ax_tex(ax_mse, x=0.5, y=0.8, text=f"MSE: {mse_text}")
 
     ax_mse.plot(epochs, mse, "--o", color="black", linewidth=linewidth)
     ax_mse.plot(
@@ -168,9 +163,7 @@ def visual_history(
     # mmd
     ax_mmd.ticklabel_format(axis="y", style="sci", scilimits=(0, 0))
 
-    ax_tex(
-        ax_mmd, x=0.5, y=0.8, text=f"MMD: {hyperparameters['lambda']:1.0f}"
-    )
+    ax_tex(ax_mmd, x=0.5, y=0.8, text=f"MMD: {hyperparameters['lambda']:1.0f}")
 
     ax_mmd.plot(epochs, mmd, "--o", color="black", linewidth=linewidth)
     mmd_line, = ax_mmd.plot(
@@ -191,7 +184,8 @@ def visual_history(
     ###########################################################################
     FileDirectory().check_directory(save_to, exit_program=False)
 
-    file_name = (f"{model_id}-"
+    file_name = (
+        f"{model_id}-"
         f"ae_MSE_{mse_text}_"
         f"MMD_{hyperparameters['lambda']:1.0f}"
     )

@@ -15,9 +15,9 @@ class MMD(Distribution):
         INPUT
             number_prior_samples: samples to draw from the multivariate normal
         """
-        
+
         self.prior_samples = super().normal(number_prior_samples)
-        
+
     ###########################################################################
     def to_exponential(self, number_samples: int, parameters: dict) -> float:
         """
@@ -79,8 +79,12 @@ class MMD(Distribution):
         return mmd
 
     ###########################################################################
-    def to_gaussian(self,
-        number_samples: int, mu:float=0., std:float=1., sigma_sqrt: float = None
+    def to_gaussian(
+        self,
+        number_samples: int,
+        mu: float = 0.0,
+        std: float = 1.0,
+        sigma_sqrt: float = None,
     ) -> float:
         """
         Compute MMD between Normal and gaussian distribution
@@ -97,16 +101,20 @@ class MMD(Distribution):
         """
 
         if sigma_sqrt == None:
-            sigma_sqrt = 2.
-            
-        in_samples = super().gaussian(number_samples=number_samples, mu=mu, std=std)
+            sigma_sqrt = 2.0
+
+        in_samples = super().gaussian(
+            number_samples=number_samples, mu=mu, std=std
+        )
 
         mmd = self.compute_mmd(in_samples=in_samples, sigma_sqrt=sigma_sqrt)
 
         return mmd, in_samples
 
     ###########################################################################
-    def compute_mmd(self, in_samples: np.array, sigma_sqrt:float = None) -> float:
+    def compute_mmd(
+        self, in_samples: np.array, sigma_sqrt: float = None
+    ) -> float:
         """
         INPUT
             in_samples: samples from a distirubution used to compute its
@@ -116,7 +124,7 @@ class MMD(Distribution):
         """
 
         if sigma_sqrt == None:
-            sigma_sqrt = 2.
+            sigma_sqrt = 2.0
 
         prior_kernel = self.compute_kernel(
             self.prior_samples, self.prior_samples, sigma_sqrt
@@ -124,7 +132,9 @@ class MMD(Distribution):
 
         in_kernel = self.compute_kernel(in_samples, in_samples, sigma_sqrt)
 
-        mix_kernel = self.compute_kernel(self.prior_samples, in_samples, sigma_sqrt)
+        mix_kernel = self.compute_kernel(
+            self.prior_samples, in_samples, sigma_sqrt
+        )
 
         mmd = (
             np.mean(prior_kernel)
@@ -138,7 +148,7 @@ class MMD(Distribution):
     def compute_kernel(self, x, y, sigma_sqrt):
 
         if sigma_sqrt == None:
-            sigma_sqrt = 2.
+            sigma_sqrt = 2.0
 
         x_size = x.shape[0]
         y_size = y.shape[0]
@@ -149,7 +159,7 @@ class MMD(Distribution):
         tiled_y = np.tile(y.reshape(1, y_size, dim), (x_size, 1, 1))
 
         z_diff = tiled_x - tiled_y
-        kernel = np.exp(-np.mean(z_diff**2, axis=2) / (2 * sigma_sqrt))
+        kernel = np.exp(-np.mean(z_diff ** 2, axis=2) / (2 * sigma_sqrt))
 
         return kernel
 

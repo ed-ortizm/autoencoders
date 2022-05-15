@@ -88,7 +88,9 @@ class Distribution:
         return samples
 
     ###########################################################################
-    def gaussian(self, number_samples: int, mu:float=0., std:float=1.) -> np.array:
+    def gaussian(
+        self, number_samples: int, mu: float = 0.0, std: float = 1.0
+    ) -> np.array:
         """
         Sample from gaussian distribution
 
@@ -104,10 +106,8 @@ class Distribution:
         # samples = np.random.multivariate_normal(
         #     mean, covariance, size=number_samples
         # )
-        
-        samples = np.random.normal(
-            loc=mu, scale=std, size=(number_samples,1)
-        )
+
+        samples = np.random.normal(loc=mu, scale=std, size=(number_samples, 1))
 
         return samples
 

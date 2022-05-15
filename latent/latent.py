@@ -1,4 +1,14 @@
+"""Get latent representation of a set of models"""
+from configparser import ConfigParser, ExtendedInterpolation
+import glob
 import os
+import time
+
+import numpy as np
+import tensorflow as tf
+
+from autoencoders.ae import AutoEncoder
+from sdss.utils.managefiles import FileDirectory
 
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
@@ -14,18 +24,6 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 # 2 = INFO and WARNING messages are not printed
 # 3 = INFO, WARNING, and ERROR messages are not printed
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-###############################################################################
-from configparser import ConfigParser, ExtendedInterpolation
-import glob
-import time
-
-import numpy as np
-import tensorflow as tf
-
-from autoencoders.ae import AutoEncoder
-from sdss.utils.managefiles import FileDirectory
-from sdss.utils.configfile import ConfigurationFile
-
 ###############################################################################
 start_time = time.time()
 ###############################################################################
@@ -51,7 +49,7 @@ print(f"Load {bin_id} from {meta}", end="\n")
 data_directory = parser.get("directory", "data")
 FileDirectory().check_directory(data_directory, exit_program=True)
 
-fluxes_name = parser.get("file","fluxes")
+fluxes_name = parser.get("file", "fluxes")
 fluxes = np.load(f"{data_directory}/{fluxes_name}")
 
 models_directory = parser.get("directory", "model")

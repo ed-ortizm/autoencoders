@@ -9,10 +9,7 @@ class KLD:
     """
 
     def __init__(
-        self,
-        x_min: float = -10.0,
-        x_max: float = 10.0,
-        grid_size: int = 1000,
+        self, x_min: float = -10.0, x_max: float = 10.0, grid_size: int = 1000
     ):
         """
         INPUT

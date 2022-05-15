@@ -44,9 +44,9 @@ latent_name = parser.get("file", "latent")
 
 _ = [
     FileDirectory().file_exists(
-        f"{latent_location}/{latent_name}",
-        exit_program=True
-    ) for latent_location in latent_directories
+        f"{latent_location}/{latent_name}", exit_program=True
+    )
+    for latent_location in latent_directories
 ]
 
 bin_id = parser.get("common", "bin")
@@ -65,9 +65,7 @@ alpha = parser.getfloat("plot", "alpha")
 plot_format = parser.get("plot", "format")
 
 number_latent_variables = None
-hues = ConfigurationFile().entry_to_list(
-    parser.get("plot", "hues"), str, ","
-)
+hues = ConfigurationFile().entry_to_list(parser.get("plot", "hues"), str, ",")
 
 show_undefined = parser.getboolean("plot", "show_undefined")
 
@@ -95,8 +93,7 @@ for idx, latent_directory in enumerate(latent_directories):
         if show_undefined is True:
             plot_df = bin_df
         else:
-            plot_df = bin_df[bin_df[hue]!="undefined"]
-
+            plot_df = bin_df[bin_df[hue] != "undefined"]
 
         for latent_x in range(number_latent_variables):
 
@@ -105,12 +102,18 @@ for idx, latent_directory in enumerate(latent_directories):
                 if latent_x == latent_y:
                     continue
 
-                print(f"Pair plots: {latent_x:02d} vs {latent_y:02d}", end="\r")
+                print(
+                    f"Pair plots: {latent_x:02d} vs {latent_y:02d}", end="\r"
+                )
 
                 # pair_plot = sns.scatterplot(
                 sns.scatterplot(
-                    x=f"{latent_x:02d}Latent", y=f"{latent_y:02d}Latent",
-                    ax=ax, data=plot_df, hue=hue, alpha=alpha
+                    x=f"{latent_x:02d}Latent",
+                    y=f"{latent_y:02d}Latent",
+                    ax=ax,
+                    data=plot_df,
+                    hue=hue,
+                    alpha=alpha,
                 )
 
                 fig.savefig(
@@ -120,14 +123,18 @@ for idx, latent_directory in enumerate(latent_directories):
                 )
 
                 ax.clear()
-        ###########################################################################
+        #######################################################################
         for metric in metrics:
 
             print(f"Umap visualization: {metric}", end="\r")
 
             pair_plot = sns.scatterplot(
-                x=f"{metric}_01", y=f"{metric}_02",
-                ax=ax, data=plot_df, hue=hue, alpha=alpha
+                x=f"{metric}_01",
+                y=f"{metric}_02",
+                ax=ax,
+                data=plot_df,
+                hue=hue,
+                alpha=alpha,
             )
 
             fig.savefig(

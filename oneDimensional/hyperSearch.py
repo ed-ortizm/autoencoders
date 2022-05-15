@@ -79,11 +79,11 @@ if __name__ == "__main__":
     if type(grid["reconstruction_weight"]) != type([]):
 
         grid["reconstruction_weight"] = [
-            grid["reconstruction_weight"]*input_dimensions
+            grid["reconstruction_weight"] * input_dimensions
         ]
     else:
         grid["reconstruction_weight"] = [
-           n * input_dimensions for n in grid["reconstruction_weight"]
+            n * input_dimensions for n in grid["reconstruction_weight"]
         ]
     ###########################################################################
     # Set lambdas

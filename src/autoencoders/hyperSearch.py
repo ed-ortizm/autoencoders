@@ -58,9 +58,7 @@ def init_shared_data(
 
 ###############################################################################
 def build_and_train_model(
-    rec_weight: float,
-    alpha: float,
-    lambda_: float,
+    rec_weight: float, alpha: float, lambda_: float
 ) -> None:
     """
     Define the AutoEncoder instance based on hyperparameters from the grid
@@ -87,7 +85,6 @@ def build_and_train_model(
     hyperparameters["reconstruction_weight"] = rec_weight
     hyperparameters["alpha"] = alpha
     hyperparameters["lambda"] = lambda_
-
 
     with counter.get_lock():
 
