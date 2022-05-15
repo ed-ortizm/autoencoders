@@ -93,9 +93,9 @@ for idx, latent_directory in enumerate(latent_directories):
     for hue in hues:
 
         if show_undefined is True:
-            plot_df = bin_df[bin_df[hue]!="undefined"]
-        else:
             plot_df = bin_df
+        else:
+            plot_df = bin_df[bin_df[hue]!="undefined"]
 
 
         for latent_x in range(number_latent_variables):
@@ -131,7 +131,7 @@ for idx, latent_directory in enumerate(latent_directories):
             )
 
             fig.savefig(
-                f"{latent_directory}/umap_{metric}"
+                f"{latent_directory}/umap_{metric}_"
                 f"{hue}_{show_undefined}.{plot_format}"
             )
 
