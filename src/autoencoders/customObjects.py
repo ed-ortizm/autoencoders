@@ -2,7 +2,7 @@
 import tensorflow as tf
 from tensorflow import keras
 
-###############################################################################
+
 # taken from tf tutorias website
 class SamplingLayer(keras.layers.Layer):
     """
