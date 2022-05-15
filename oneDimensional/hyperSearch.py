@@ -1,5 +1,14 @@
-#!/usr/bin/env python3.8
+"""Train a grid of autoencoders"""
+from configparser import ConfigParser, ExtendedInterpolation
+import multiprocessing as mp
+from multiprocessing.sharedctypes import RawArray
 import os
+import time
+
+import numpy as np
+
+from sdss.utils.configfile import ConfigurationFile
+from autoencoders import hyperSearch
 
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
@@ -15,21 +24,6 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 # 2 = INFO and WARNING messages are not printed
 # 3 = INFO, WARNING, and ERROR messages are not printed
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-###############################################################################
-import ctypes
-from configparser import ConfigParser, ExtendedInterpolation
-import itertools
-import multiprocessing as mp
-from multiprocessing.sharedctypes import RawArray
-import time
-
-###############################################################################
-import numpy as np
-
-from sdss.utils.managefiles import FileDirectory
-from sdss.utils.configfile import ConfigurationFile
-from autoencoders import hyperSearch
-
 ###############################################################################
 if __name__ == "__main__":
 
@@ -76,7 +70,7 @@ if __name__ == "__main__":
 
         grid["reconstruction_weight"] = [input_dimensions]
 
-    if type(grid["reconstruction_weight"]) != type([]):
+    if isinstance(grid["reconstruction_weight"], list) is False:
 
         grid["reconstruction_weight"] = [
             grid["reconstruction_weight"] * input_dimensions

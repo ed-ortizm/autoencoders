@@ -1,5 +1,15 @@
-#!/usr/bin/env python3.8
+"""Train a single AutoEncoder"""
 import os
+###############################################################################
+from configparser import ConfigParser, ExtendedInterpolation
+import time
+
+import numpy as np
+import tensorflow as tf
+
+from autoencoders.ae import AutoEncoder
+from sdss.utils.configfile import ConfigurationFile
+
 
 # Set environment variables to disable multithreading as users will probably
 # want to set the number of cores to the max of their computer.
@@ -10,19 +20,6 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-###############################################################################
-from configparser import ConfigParser, ExtendedInterpolation
-import sys
-import time
-
-###############################################################################
-import numpy as np
-import tensorflow as tf
-from tensorflow import keras
-
-from autoencoders.ae import AutoEncoder
-from sdss.superclasses import ConfigurationFile, FileDirectory
-
 ###############################################################################
 ti = time.time()
 ###############################################################################
