@@ -16,6 +16,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 ###############################################################################
 from configparser import ConfigParser, ExtendedInterpolation
+import glob
 import time
 
 import numpy as np
@@ -42,42 +43,52 @@ config = tf.compat.v1.ConfigProto(
 )
 session = tf.compat.v1.Session(config=config)
 ###############################################################################
-# load data
 meta = parser.get("common", "meta")
 bin_id = parser.get("common", "bin")
 
-model_id = parser.get("file", "model")
-print(f"Load model {model_id} trained on:\n{meta}:{bin_id}", end="\n")
-
-model_directory = parser.get("directory", "model")
-model_directory = f"{model_directory}/{model_id}"
-
-model = AutoEncoder(reload=True, reload_from=model_directory)
-###############################################################################
-print(f"Load data", end="\n")
+print(f"Load {bin_id} from {meta}", end="\n")
 
 data_directory = parser.get("directory", "data")
 FileDirectory().check_directory(data_directory, exit_program=True)
 
 fluxes_name = parser.get("file","fluxes")
 fluxes = np.load(f"{data_directory}/{fluxes_name}")
-###############################################################################
-print(f"Compute and save latent representation of data", end="\n")
 
-latent_representation = model.encode(fluxes)
+models_directory = parser.get("directory", "model")
+model_locations = glob.glob(f"{models_directory}/*/")
 
-save_data_to = parser.get("directory", "latent")
-save_data_to = f"{save_data_to}/{model_id}"
-FileDirectory().check_directory(save_data_to, exit_program=False)
+# load model config file to save in output dir
+model_parser = ConfigParser(interpolation=ExtendedInterpolation())
+model_config_file_name = glob.glob(f"{models_directory}/*.ini")[0]
+model_parser.read(model_config_file_name)
 
-np.save(f"{save_data_to}/latent_{bin_id}.npy", latent_representation)
+models_id = [model_id.split("/")[-2] for model_id in model_locations]
+
+for idx, model_location in enumerate(model_locations):
+
+    print(f"{bin_id}: Latent space of model {models_id[idx]}", end="\n")
+
+    model = AutoEncoder(reload=True, reload_from=model_location)
+    ###########################################################################
+
+    latent_representation = model.encode(fluxes)
+
+    save_data_to = parser.get("directory", "latent")
+    save_data_to = f"{save_data_to}/{models_id[idx]}"
+    FileDirectory().check_directory(save_data_to, exit_program=False)
+
+    np.save(f"{save_data_to}/latent_{bin_id}.npy", latent_representation)
+    ###########################################################################
+    print(f"Save configuration files of run", end="\n")
+
+    with open(f"{save_data_to}/{config_file_name}", "w") as config_file:
+        parser.write(config_file)
+    ###########################################################################
+    print(f"Save configuration files of models", end="\n")
+
+    with open(f"{save_data_to}/model.ini", "w") as config_file:
+        model_parser.write(config_file)
 ###############################################################################
 session.close()
-###############################################################################
-print(f"Save configuration files of run", end="\n")
-
-with open(f"{save_data_to}/{config_file_name}", "w") as config_file:
-    parser.write(config_file)
-###############################################################################
 finish_time = time.time()
 print(f"\nRun time: {finish_time - start_time:.2f}")
