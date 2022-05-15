@@ -25,8 +25,8 @@ class AutoEncoder(FileDirectory):
     ###########################################################################
     def __init__(
         self,
-        architecture: dict = {None},
-        hyperparameters: dict = {None},
+        architecture: dict = None,
+        hyperparameters: dict = None,
         reload: bool = False,
         reload_from: str = None,
     ):
