@@ -1,3 +1,4 @@
+"""Custom objects for infoVAE"""
 import tensorflow as tf
 from tensorflow import keras
 
@@ -15,7 +16,9 @@ class SamplingLayer(keras.layers.Layer):
         super(SamplingLayer, self).__init__(name=name)
 
     ###########################################################################
-    def call(self, inputs):
+    @staticmethod
+    def call(inputs):
+        """Call method"""
 
         z_mean, z_log_var = inputs
 
@@ -30,6 +33,7 @@ class SamplingLayer(keras.layers.Layer):
 
     ###########################################################################
     def get_config(self):
+        """get_config method"""
 
         return {"name": self.name}
 
@@ -37,6 +41,7 @@ class SamplingLayer(keras.layers.Layer):
     # necessary to serialize the custom loss
     @classmethod
     def from_config(cls, config):
+        """from_config method"""
         return cls(**config)
 
 
@@ -67,6 +72,7 @@ class MyCustomLoss(keras.losses.Loss):
 
     ###########################################################################
     def call(self, y_true, y_pred):
+        """Call method"""
 
         loss = self.weight_factor * self.keras_loss(y_true, y_pred)
 
@@ -75,6 +81,7 @@ class MyCustomLoss(keras.losses.Loss):
     ###########################################################################
     # necessary to serialize the custom loss
     def get_config(self):
+        """get_config method"""
         return {
             "name": self.name,
             "keras_loss": self.keras_loss,
@@ -85,23 +92,5 @@ class MyCustomLoss(keras.losses.Loss):
     # necessary to serialize the custom loss
     @classmethod
     def from_config(cls, config):
+        """from_config method"""
         return cls(**config)
-
-
-###############################################################################
-# class MyCustomMetric(keras.metrics.Metric):
-#     def __init__(self, name: str="customMetric", **kwargs):
-#         super(MyCustomMetric, self).__init__(name=name, **kwargs)
-#         pass
-#
-#     def update_state(self, y_true: np.array, y_pred:np.array, sample_weight: float=None):
-#         # return
-#         pass
-#
-#     def result(self):
-#         pass
-#
-#     def reset_state(self):
-#         # The state of the metric will be reset at the start of each epoch.
-#         pass
-###############################################################################

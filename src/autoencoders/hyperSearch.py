@@ -1,12 +1,11 @@
-# process base parallelism to train models in a grid of hyperparameters
+"""process base parallelism to train models in a grid of hyperparameters"""
 import itertools
 import multiprocessing as mp
 from multiprocessing.sharedctypes import RawArray
 
-
 import numpy as np
 
-###############################################################################
+
 def to_numpy_array(array: RawArray, array_shape: tuple) -> np.array:
     """Create a numpy array backed by a shared memory Array."""
 
@@ -102,7 +101,7 @@ def build_and_train_model(
 
 
 ###############################################################################
-def get_parameters_grid(hyperparameters: dict) -> itertools.product:
+def get_parameters_grid(hyperparameters_grid: dict) -> itertools.product:
     """
     Returns cartesian product of hyperparameters: reconstruction_weight,
         alpha and lambda
@@ -114,15 +113,15 @@ def get_parameters_grid(hyperparameters: dict) -> itertools.product:
         parameters_grid: iterable with the cartesian product
             of input parameters
     """
-    for key, value in hyperparameters.items():
+    for key, value in hyperparameters_grid.items():
 
-        if type(value) != type([]):
-            hyperparameters[key] = [value]
+        if isinstance(value, list) is False:
+            hyperparameters_grid[key] = [value]
 
     grid = itertools.product(
-        hyperparameters["reconstruction_weight"],
-        hyperparameters["alpha"],
-        hyperparameters["lambda"],
+        hyperparameters_grid["reconstruction_weight"],
+        hyperparameters_grid["alpha"],
+        hyperparameters_grid["lambda"],
     )
 
     return grid
