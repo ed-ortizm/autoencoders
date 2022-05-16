@@ -21,7 +21,7 @@ os.environ["NUMEXPR_NUM_THREADS"] = "1"
 start_time = time.time()
 ###############################################################################
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-config_file_name = "umapvisual.ini"
+config_file_name = "umap_embedding.ini"
 parser.read(f"{config_file_name}")
 config = ConfigurationFile()
 ###############################################################################
