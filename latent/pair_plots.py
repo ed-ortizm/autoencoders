@@ -1,4 +1,4 @@
-"""Do scatter plots of latent variables, including umap representation"""
+"""Pair plot between variables of latent space"""
 from configparser import ConfigParser, ExtendedInterpolation
 import glob
 import time
@@ -52,7 +52,6 @@ _ = [
 ]
 
 bin_id = parser.get("common", "bin")
-metrics = config.entry_to_list(parser.get("umap", "metrics"), str, ",")
 
 # set plot parameters
 

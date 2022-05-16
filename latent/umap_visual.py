@@ -1,4 +1,4 @@
-"""Do scatter plots of latent variables, including umap representation"""
+"""UMAP 2D embedding visualization"""
 from configparser import ConfigParser, ExtendedInterpolation
 import glob
 import time
