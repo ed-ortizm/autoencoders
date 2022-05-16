@@ -17,7 +17,9 @@ start_time = time.time()
 parser = ConfigParser(interpolation=ExtendedInterpolation())
 config_file_name = "visual_latent.ini"
 parser.read(f"{config_file_name}")
+
 config = ConfigurationFile()
+manage_files = FileDirectory()
 ###############################################################################
 print(f"Load metadata", end="\n")
 
@@ -43,7 +45,7 @@ latent_directories = glob.glob(f"{latent_directory}/*/")
 latent_name = parser.get("file", "latent")
 
 _ = [
-    FileDirectory().file_exists(
+    manage_files.file_exists(
         f"{latent_location}/{latent_name}", exit_program=True
     )
     for latent_location in latent_directories
@@ -117,8 +119,11 @@ for model_idx, latent_directory in latent_directories:
                     edgecolors = parameters_of_plot["edgecolors"],
                 )
 
+                save_to = f"{latent_directory}/pair_plots"
+                manage_files.check_directory(save_to, exit_program=False)
+
                 fig.savefig(
-                    f"{latent_directory}/"
+                    f"{save_to}/"
                     f"pair_{latent_x:02d}_{latent_y:02d}_"
                     f"{hue}.{parameters_of_plot['format']}"
                 )
@@ -142,9 +147,12 @@ for model_idx, latent_directory in latent_directories:
                 edgecolors = parameters_of_plot["edgecolors"],
             )
 
+            save_to = f"{latent_directory}/umap"
+            manage_files.check_directory(save_to, exit_program=False)
+
             fig.savefig(
-                f"{latent_directory}/umap_{metric}_"
-                f"{hue}.{parameters_of_plot['format']}"
+                f"{save_to}/"
+                f"umap_{metric}_{hue}.{parameters_of_plot['format']}"
             )
 
             ax.clear()
