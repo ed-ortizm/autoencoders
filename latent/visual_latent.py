@@ -20,8 +20,10 @@ parser.read(f"{config_file_name}")
 config = ConfigurationFile()
 ###############################################################################
 print(f"Load metadata", end="\n")
+
 data_directory = parser.get("directory", "data")
 science_df = parser.get("file", "science")
+
 science_df = pd.read_csv(
     f"{data_directory}/{science_df}", index_col="specobjid"
 )
@@ -38,8 +40,6 @@ print(f"Load embedding and latent representations", end="\n")
 latent_directory = parser.get("directory", "latent")
 latent_directories = glob.glob(f"{latent_directory}/*/")
 
-models_id = [model_id.split("/")[-2] for model_id in latent_directories]
-
 latent_name = parser.get("file", "latent")
 
 _ = [
@@ -54,22 +54,24 @@ metrics = config.entry_to_list(parser.get("umap", "metrics"), str, ",")
 
 # set plot parameters
 
-size = ConfigurationFile().entry_to_list(
-    parser.get("plot", "size"), float, ","
+parameters_of_plot = config.section_to_dictionary(
+    parser.items("plot"), value_separators=[","]
 )
+
+size = config.entry_to_list(parser.get("plot", "size"), float, ",")
 size = tuple(size)
+parameters_of_plot["size"] = size
 
 fig, ax = plt.subplots(figsize=size, tight_layout=True)
 
-alpha = parser.getfloat("plot", "alpha")
-plot_format = parser.get("plot", "format")
-
+# flags
 number_latent_variables = None
-hues = ConfigurationFile().entry_to_list(parser.get("plot", "hues"), str, ",")
+bin_df_of_plot = None
 
-show_undefined = parser.getboolean("plot", "show_undefined")
 
-for idx, latent_directory in enumerate(latent_directories):
+models_ids = [model_id.split("/")[-2] for model_id in latent_directories]
+
+for model_idx, latent_directory in latent_directories:
 
     latent = np.load(f"{latent_directory}/{latent_name}")
     number_latent_variables = latent.shape[1]
@@ -86,14 +88,11 @@ for idx, latent_directory in enumerate(latent_directories):
         bin_df[f"{metric}_01"] = embedding[:, 0]
         bin_df[f"{metric}_02"] = embedding[:, 1]
 
-    print(f"Save pair plots of latent representation", end="\n")
+    print(f"model {models_ids[model_idx]}: pair plots", end="\n")
 
-    for hue in hues:
+    for hue in parameters_of_plot["hues"]:
 
-        if show_undefined is True:
-            plot_df = bin_df
-        else:
-            plot_df = bin_df[bin_df[hue] != "undefined"]
+        bin_df_of_plot = bin_df[bin_df[hue] != "undefined"]
 
         for latent_x in range(number_latent_variables):
 
@@ -111,35 +110,41 @@ for idx, latent_directory in enumerate(latent_directories):
                     x=f"{latent_x:02d}Latent",
                     y=f"{latent_y:02d}Latent",
                     ax=ax,
-                    data=plot_df,
+                    data=bin_df_of_plot,
                     hue=hue,
-                    alpha=alpha,
+                    alpha=parameters_of_plot["alpha"],
+                    marker_size = parameters_of_plot["marker_size"],
+                    edgecolors = parameters_of_plot["edgecolors"],
                 )
 
                 fig.savefig(
                     f"{latent_directory}/"
                     f"pair_{latent_x:02d}_{latent_y:02d}_"
-                    f"{hue}_{show_undefined}.{plot_format}"
+                    f"{hue}.{parameters_of_plot['format']}"
                 )
 
                 ax.clear()
         #######################################################################
+        print(f"model {models_ids[model_idx]}: UMAP", end="\n")
+
         for metric in metrics:
 
-            print(f"Umap visualization: {metric}", end="\r")
+            print(f"UMAP metric: {metric}", end="\r")
 
             pair_plot = sns.scatterplot(
                 x=f"{metric}_01",
                 y=f"{metric}_02",
                 ax=ax,
-                data=plot_df,
+                data=bin_df_of_plot,
                 hue=hue,
-                alpha=alpha,
+                alpha=parameters_of_plot["alpha"],
+                marker_size = parameters_of_plot["marker_size"],
+                edgecolors = parameters_of_plot["edgecolors"],
             )
 
             fig.savefig(
                 f"{latent_directory}/umap_{metric}_"
-                f"{hue}_{show_undefined}.{plot_format}"
+                f"{hue}.{parameters_of_plot['format']}"
             )
 
             ax.clear()
