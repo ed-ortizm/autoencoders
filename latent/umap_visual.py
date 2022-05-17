@@ -15,7 +15,7 @@ from sdss.utils.configfile import ConfigurationFile
 start_time = time.time()
 ###############################################################################
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-config_file_name = "visual_latent.ini"
+config_file_name = "umap_visual.ini"
 parser.read(f"{config_file_name}")
 
 config = ConfigurationFile()
@@ -73,7 +73,7 @@ bin_df_of_plot = None
 
 models_ids = [model_id.split("/")[-2] for model_id in latent_directories]
 
-for model_idx, latent_directory in latent_directories:
+for model_idx, latent_directory in enumerate(latent_directories):
 
     print(f"model {models_ids[model_idx]}: UMAP", end="\n")
 
@@ -101,7 +101,7 @@ for model_idx, latent_directory in latent_directories:
                 data=bin_df_of_plot,
                 hue=hue,
                 alpha=parameters_of_plot["alpha"],
-                marker_size = parameters_of_plot["marker_size"],
+                s = parameters_of_plot["marker_size"],
                 edgecolors = parameters_of_plot["edgecolors"],
             )
 

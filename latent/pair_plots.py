@@ -15,7 +15,7 @@ from sdss.utils.configfile import ConfigurationFile
 start_time = time.time()
 ###############################################################################
 parser = ConfigParser(interpolation=ExtendedInterpolation())
-config_file_name = "visual_latent.ini"
+config_file_name = "pair_plots.ini"
 parser.read(f"{config_file_name}")
 
 config = ConfigurationFile()
@@ -72,7 +72,7 @@ bin_df_of_plot = None
 
 models_ids = [model_id.split("/")[-2] for model_id in latent_directories]
 
-for model_idx, latent_directory in latent_directories:
+for model_idx, latent_directory in enumerate(latent_directories):
 
     latent = np.load(f"{latent_directory}/{latent_name}")
     number_latent_variables = latent.shape[1]
@@ -108,7 +108,7 @@ for model_idx, latent_directory in latent_directories:
                     data=bin_df_of_plot,
                     hue=hue,
                     alpha=parameters_of_plot["alpha"],
-                    marker_size = parameters_of_plot["marker_size"],
+                    s = parameters_of_plot["marker_size"],
                     edgecolors = parameters_of_plot["edgecolors"],
                 )
 
