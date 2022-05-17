@@ -55,7 +55,10 @@ for idx, latent_directory in enumerate(latent_directories):
 
         print(f"model {models_id[idx]}: TSNE {metric} metric", end="\n")
 
-        reducer = TSNE(metric=metric, n_jobs=jobs)
+        reducer = TSNE(
+            metric=metric, n_jobs=jobs, init="pca",
+            learning_rate="auto", square_distances=True
+        )
         embedding = reducer.fit_transform(latent)
 
         np.save(f"{latent_directory}/tsne_{metric}_{bin_id}.npy", embedding)
