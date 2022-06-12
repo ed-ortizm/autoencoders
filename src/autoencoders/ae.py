@@ -375,7 +375,7 @@ class AutoEncoder(FileDirectory):
             z_layer = Dense(
                 units=self.architecture["latent_dimensions"],
                 activation="relu",
-                name=f"z_deterministic",
+                name="z_deterministic",
             )
 
             z = z_layer(block_output)

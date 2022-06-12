@@ -37,7 +37,7 @@ if __name__ == "__main__":
     parser.read("hyperSearch.ini")
     ###########################################################################
     # load data
-    print(f"Load data")
+    print("Load data")
     data_directory = parser.get("directory", "train")
     data_name = parser.get("file", "train")
     data = np.load(f"{data_directory}/{data_name}", mmap_mode="r")
@@ -59,7 +59,7 @@ if __name__ == "__main__":
         parser.items("hyperparameters"), value_separators=["_"]
     )
     ###########################################################################
-    print(f"Get hyperparameters grid", end="\n")
+    print("Get hyperparameters grid", end="\n")
     grid = config_handler.section_to_dictionary(
         parser.items("param-search"), value_separators=["_", ","]
     )
@@ -133,7 +133,9 @@ if __name__ == "__main__":
 
     ###########################################################################
     # Save configuration file
-    with open(f"{model_directory}/hyperSearch.ini", "w") as configfile:
+    with open(
+        f"{model_directory}/hyperSearch.ini", "w", encoding="utf8"
+    ) as configfile:
         parser.write(configfile)
     ###########################################################################
     time_f = time.time()

@@ -97,7 +97,7 @@ for model_idx, latent_directory in enumerate(latent_directories):
                 print(
                     f"Pair plot: {latent_x:02d} vs {latent_y:02d}"
                     f"Hue: {hue}",
-                    end="\r"
+                    end="\r",
                 )
 
                 # pair_plot = sns.scatterplot(
@@ -108,8 +108,8 @@ for model_idx, latent_directory in enumerate(latent_directories):
                     data=bin_df_of_plot,
                     hue=hue,
                     alpha=parameters_of_plot["alpha"],
-                    s = parameters_of_plot["marker_size"],
-                    edgecolors = parameters_of_plot["edgecolors"],
+                    s=parameters_of_plot["marker_size"],
+                    edgecolors=parameters_of_plot["edgecolors"],
                 )
 
                 save_to = f"{latent_directory}/pair_plots"

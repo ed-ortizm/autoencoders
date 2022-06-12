@@ -85,7 +85,6 @@ for model_idx, latent_directory in enumerate(latent_directories):
         bin_df[f"{metric}_01"] = embedding[:, 0]
         bin_df[f"{metric}_02"] = embedding[:, 1]
 
-
     for hue in parameters_of_plot["hues"]:
 
         bin_df_of_plot = bin_df[bin_df[hue] != "undefined"]
@@ -101,8 +100,8 @@ for model_idx, latent_directory in enumerate(latent_directories):
                 data=bin_df_of_plot,
                 hue=hue,
                 alpha=parameters_of_plot["alpha"],
-                s = parameters_of_plot["marker_size"],
-                edgecolors = parameters_of_plot["edgecolors"],
+                s=parameters_of_plot["marker_size"],
+                edgecolors=parameters_of_plot["edgecolors"],
             )
 
             save_to = f"{latent_directory}/umap"

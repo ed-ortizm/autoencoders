@@ -49,6 +49,8 @@ def init_shared_data(
     counter = share_counter
     data = to_numpy_array(share_data, data_shape)
     data[...] = np.load(data_location)
+    # shuffle data to break any bias in spectra order if present
+    np.random.shuffle(data)
     architecture = share_architecture
     hyperparameters = share_hyperparameters
     model_directory = share_model_directory
