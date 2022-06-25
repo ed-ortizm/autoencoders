@@ -182,7 +182,7 @@ class AutoEncoder(FileDirectory):
         if spectra.ndim == 1:
             spectra = spectra.reshape(1, -1)
 
-        predicted_spectra = self.model.predict(spectra)
+        predicted_spectra = self.model.predict(spectra, verbose=0)
 
         return predicted_spectra
 
@@ -203,7 +203,7 @@ class AutoEncoder(FileDirectory):
         if spectra.ndim == 1:
             spectra = spectra.reshape(1, -1)
 
-        z = self.encoder.predict(spectra)
+        z = self.encoder.predict(spectra, verbose=0)
 
         return z
 
