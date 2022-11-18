@@ -166,7 +166,7 @@ def visual_history(
     ax_tex(ax_mmd, x=0.5, y=0.8, text=f"MMD: {hyperparameters['lambda']:1.0f}")
 
     ax_mmd.plot(epochs, mmd, "--o", color="black", linewidth=linewidth)
-    mmd_line, = ax_mmd.plot(
+    (mmd_line,) = ax_mmd.plot(
         epochs,
         validation_mmd,
         "--*",
