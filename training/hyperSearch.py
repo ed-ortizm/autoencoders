@@ -17,25 +17,25 @@ os.environ["OPENBLAS_NUM_THREADS"] = "1"
 os.environ["MKL_NUM_THREADS"] = "1"
 os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
-###############################################################################
+#########################################################################
 # Set TensorFlow print of log information
 # 0 = all messages are logged (default behavior)
 # 1 = INFO messages are not printed
 # 2 = INFO and WARNING messages are not printed
 # 3 = INFO, WARNING, and ERROR messages are not printed
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-###############################################################################
+#########################################################################
 if __name__ == "__main__":
 
     mp.set_start_method("spawn", force=True)
 
-    ###########################################################################
+    #####################################################################
     ti = time.time()
-    ###########################################################################
+    #####################################################################
     config_handler = ConfigurationFile()
     parser = ConfigParser(interpolation=ExtendedInterpolation())
     parser.read("hyperSearch.ini")
-    ###########################################################################
+    #####################################################################
     # load data
     print("Load data")
     data_directory = parser.get("directory", "train")
@@ -48,7 +48,7 @@ if __name__ == "__main__":
     array_dtype = data.dtype
 
     del data
-    ###########################################################################
+    #####################################################################
     architecture = config_handler.section_to_dictionary(
         parser.items("architecture"), value_separators=["_"]
     )
@@ -58,12 +58,12 @@ if __name__ == "__main__":
     hyperparameters = config_handler.section_to_dictionary(
         parser.items("hyperparameters"), value_separators=["_"]
     )
-    ###########################################################################
+    #####################################################################
     print("Get hyperparameters grid", end="\n")
     grid = config_handler.section_to_dictionary(
         parser.items("param-search"), value_separators=["_", ","]
     )
-    ###########################################################################
+    #####################################################################
     # Set reconstruction weight as list
 
     if isinstance(grid["reconstruction_weight"], list) is False:
@@ -71,7 +71,7 @@ if __name__ == "__main__":
         grid["reconstruction_weight"] = [
             grid["reconstruction_weight"]
         ]
-    ###########################################################################
+    #####################################################################
     # Set lambdas
     if grid["lambda"] == "random":
 
@@ -94,16 +94,16 @@ if __name__ == "__main__":
         grid["lambda"] = lambdas.tolist()
 
     grid = hyperSearch.get_parameters_grid(grid)
-    ###########################################################################
+    #####################################################################
     counter = mp.Value("i", 0)
 
     share_data = RawArray(np.ctypeslib.as_ctypes_type(array_dtype), array_size)
 
-    #######################################################################
+    #####################################################################
     model_directory = parser.get("directory", "models")
     latent_dimensions = parser.getint("architecture", "latent_dimensions")
     model_directory = f"{model_directory}/latent_{latent_dimensions:02d}"
-    ###########################################################################
+    #####################################################################
     number_processes = parser.getint("configuration", "number_processes")
     cores_per_worker = parser.getint("configuration", "cores_per_worker")
     with mp.Pool(
@@ -123,7 +123,7 @@ if __name__ == "__main__":
 
         pool.starmap(hyperSearch.build_and_train_model, grid)
 
-    ###########################################################################
+    #####################################################################
     # Save configuration file
     with open(
         f"{model_directory}/hyperSearch.ini", "w", encoding="utf8"

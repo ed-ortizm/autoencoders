@@ -10,12 +10,10 @@ class SamplingLayer(keras.layers.Layer):
     And compute kl_divergence
     """
 
-    ###########################################################################
     def __init__(self, name: str = "sampleLayer"):
 
         super(SamplingLayer, self).__init__(name=name)
 
-    ###########################################################################
     @staticmethod
     def call(inputs):
         """Call method"""
@@ -31,13 +29,11 @@ class SamplingLayer(keras.layers.Layer):
 
         return z
 
-    ###########################################################################
     def get_config(self):
         """get_config method"""
 
         return {"name": self.name}
 
-    ###########################################################################
     # necessary to serialize the custom loss
     @classmethod
     def from_config(cls, config):
@@ -45,7 +41,6 @@ class SamplingLayer(keras.layers.Layer):
         return cls(**config)
 
 
-###############################################################################
 class MyCustomLoss(keras.losses.Loss):
     """
     Create custom loss function for autoencoders using prebuilt losses
@@ -70,7 +65,6 @@ class MyCustomLoss(keras.losses.Loss):
         self.keras_loss = keras_loss
         self.weight_factor = weight_factor
 
-    ###########################################################################
     def call(self, y_true, y_pred):
         """Call method"""
 

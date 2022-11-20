@@ -8,8 +8,8 @@ import tensorflow as tf
 from tensorflow import keras
 from keras.layers import Dense
 
-from autoencoders.customObjects import MyCustomLoss, SamplingLayer
 from sdss.utils.managefiles import FileDirectory
+from autoencoders.customObjects import MyCustomLoss, SamplingLayer
 
 
 class AutoEncoder(FileDirectory):
@@ -22,7 +22,6 @@ class AutoEncoder(FileDirectory):
     be able to serialize and clone the model.
     """
 
-    ###########################################################################
     def __init__(
         self,
         architecture: dict = None,
@@ -82,11 +81,10 @@ class AutoEncoder(FileDirectory):
 
             self._build_model()
 
-    ###########################################################################
     def get_architecture_and_model_str(self) -> list:
         """
-            Retrieve model architecture and name, e.g:
-            [512_256_10_256_512, infoVae_rec_3458_alpha_1_lambda_10
+        Retrieve model architecture and name, e.g:
+        [512_256_10_256_512, infoVae_rec_3458_alpha_1_lambda_10
         """
 
         architecture_str = self.architecture["encoder"]
@@ -103,10 +101,8 @@ class AutoEncoder(FileDirectory):
 
         return [architecture_str, model_name]
 
-    ###########################################################################
     def _set_class_instances_from_saved_model(self, reload_from: str) -> list:
 
-        #######################################################################
         # Get encoder and decoder
         for submodule in self.model.submodules:
 
@@ -117,7 +113,7 @@ class AutoEncoder(FileDirectory):
             elif submodule.name == "decoder":
 
                 decoder = submodule
-        #######################################################################
+
         file_location = f"{reload_from}/train_history.pkl"
         with open(file_location, "rb") as file:
             parameters = pickle.load(file)
@@ -126,7 +122,6 @@ class AutoEncoder(FileDirectory):
 
         return [encoder, decoder, architecture, hyperparameters, train_history]
 
-    ###########################################################################
     def train(self, spectra: np.array) -> keras.callbacks.History:
         """Train model with spectra array"""
 
@@ -137,6 +132,7 @@ class AutoEncoder(FileDirectory):
             mode="min",
             restore_best_weights=True,
         )
+
         learning_rate_schedule = keras.callbacks.ReduceLROnPlateau(
             monitor="val_loss",
             factor=0.1,
@@ -165,7 +161,6 @@ class AutoEncoder(FileDirectory):
 
         return history
 
-    ###########################################################################
     def reconstruct(self, spectra: np.array) -> np.array:
         """
         Once the VAE is trained, this method is used to obtain
@@ -186,7 +181,6 @@ class AutoEncoder(FileDirectory):
 
         return predicted_spectra
 
-    ###########################################################################
     def encode(self, spectra: np.array) -> np.array:
         """
         Given an array of observed fluxes, this method outputs the
@@ -207,7 +201,6 @@ class AutoEncoder(FileDirectory):
 
         return z
 
-    ###########################################################################
     def decode(self, z: np.array) -> np.array:
         """
 
@@ -230,14 +223,12 @@ class AutoEncoder(FileDirectory):
 
         return spectra
 
-    ###########################################################################
     def summary(self):
         """Return Keras buitl int summary of Model class"""
         self.encoder.summary()
         self.decoder.summary()
         self.model.summary()
 
-    ###########################################################################
     def save_model(self, save_to: str) -> None:
         """Save model with tf and Keras built in fucntionality"""
 
@@ -247,13 +238,12 @@ class AutoEncoder(FileDirectory):
         super().check_directory(save_to, exit_program=False)
 
         self.model.save(save_to)
-        #######################################################################
+
         parameters = [self.architecture, self.hyperparameters, self.history]
 
         with open(f"{save_to}/train_history.pkl", "wb") as file:
             pickle.dump(parameters, file)
 
-    ###########################################################################
     def _build_model(self) -> None:
         """
         Builds the the auto encoder model
@@ -263,7 +253,6 @@ class AutoEncoder(FileDirectory):
         self._build_ae()
         self._compile()
 
-    ###########################################################################
     def _compile(self):
 
         optimizer = keras.optimizers.Adam(
@@ -280,7 +269,6 @@ class AutoEncoder(FileDirectory):
 
         self.model.compile(optimizer=optimizer, loss=MSE, metrics=["mse"])
 
-    ###########################################################################
     def _build_ae(self):
 
         self.original_output = self.decoder(self.encoder(self.original_input))
@@ -309,7 +297,6 @@ class AutoEncoder(FileDirectory):
 
             self.model.add_loss([KLD, MMD])
 
-    ###########################################################################
     def _build_decoder(self):
         """Build decoder"""
 
@@ -326,7 +313,6 @@ class AutoEncoder(FileDirectory):
             decoder_input, decoder_output, name="decoder"
         )
 
-    ###########################################################################
     def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
 
         output_layer = Dense(
@@ -339,7 +325,6 @@ class AutoEncoder(FileDirectory):
 
         return output_tensor
 
-    ###########################################################################
     def _build_encoder(self):
         """Build encoder"""
 
@@ -382,7 +367,6 @@ class AutoEncoder(FileDirectory):
 
         self.encoder = keras.Model(encoder_input, z, name="encoder")
 
-    ###########################################################################
     @staticmethod
     def compute_kernel(x, y):
         """Weight of moments between samples of distributions"""
@@ -406,7 +390,6 @@ class AutoEncoder(FileDirectory):
 
         return kernel
 
-    ###########################################################################
     @staticmethod
     def compute_mmd(x, y):
         """Maximun Mean Discrepancy between input samples"""
@@ -423,7 +406,6 @@ class AutoEncoder(FileDirectory):
 
         return mmd
 
-    ###########################################################################
     def _add_block(self, input_tensor: tf.Tensor, block: str) -> tf.Tensor:
         """
         Build an graph of dense layers
@@ -454,7 +436,6 @@ class AutoEncoder(FileDirectory):
 
         return x
 
-    ###########################################################################
     @staticmethod
     def _get_next_dense_layer_output(
         input_tensor: tf.Tensor,  # the output of the previous layer
@@ -486,10 +467,9 @@ class AutoEncoder(FileDirectory):
 
         return output_tensor
 
-    ###########################################################################
     def _sampling_layer(
         self, encoder_output: tf.Tensor
-    ) -> [tf.Tensor, tf.Tensor, tf.Tensor]:
+    ) -> list[tf.Tensor, tf.Tensor, tf.Tensor]:
 
         """
         Sample output of the encoder and add the kl loss
@@ -519,5 +499,3 @@ class AutoEncoder(FileDirectory):
         z = sample_layer(sampling_inputs)
 
         return z, z_mean, z_log_var
-
-    ###########################################################################
