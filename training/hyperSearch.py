@@ -66,18 +66,10 @@ if __name__ == "__main__":
     ###########################################################################
     # Set reconstruction weight as list
 
-    if grid["reconstruction_weight"] == "None":
-
-        grid["reconstruction_weight"] = [input_dimensions]
-
     if isinstance(grid["reconstruction_weight"], list) is False:
 
         grid["reconstruction_weight"] = [
-            grid["reconstruction_weight"] * input_dimensions
-        ]
-    else:
-        grid["reconstruction_weight"] = [
-            n * input_dimensions for n in grid["reconstruction_weight"]
+            grid["reconstruction_weight"]
         ]
     ###########################################################################
     # Set lambdas
@@ -85,7 +77,7 @@ if __name__ == "__main__":
 
         lambdas = np.exp(
             np.random.uniform(
-                low=0, high=np.log(2e2), size=(grid["number_lambdas"])
+                low=0.1, high=np.log(1e3), size=(grid["number_lambdas"])
             )
         )
 
