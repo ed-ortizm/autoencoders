@@ -1,0 +1,24 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "autoencoders"
+version = "0.0.1"
+description = "Python Code For Outlier detection using Auto Encoders"
+readme = "README.md"
+authors = [{ name = "Edgar Ortiz", email = "ed.ortizm@gmail.com" }]
+license = { text = "MIT" }
+keywords = ["astrophysics", "galaxy", "Machine Learning"]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/ed-ortizm/autoencoders"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["[a-z]*"]
+exclude = ["old_code"]
