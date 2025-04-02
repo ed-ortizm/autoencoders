@@ -5,8 +5,9 @@ import pickle
 import numpy as np
 
 import tensorflow as tf
-from tensorflow import keras
-from keras.layers import Dense
+import keras
+from keras.models import Model
+from keras.layers import Dense, Input
 
 from sdss.utils.managefiles import FileDirectory
 from autoencoders.customObjects import MyCustomLoss, SamplingLayer
@@ -30,27 +31,38 @@ class AutoEncoder(FileDirectory):
         reload_from: str = None,
     ):
         """
-        PARAMETERS
-            architecture:
-            hyperparameters:
-            reload:
-            reload_from:
+        Initialize the autoencoder.
+
+        Parameters
+        ----------
+        architecture : dict, optional
+            Dictionary describing the model architecture (used when not reloading).
+        hyperparameters : dict, optional
+            Dictionary with training hyperparameters (used when not reloading).
+        reload : bool, optional
+            If True, load model and training info from disk.
+        reload_from : str, optional
+            Path to the directory containing model.keras and training metadata.
         """
 
         super().__init__()
 
-        if reload is True:
+        if reload:
+
+            keras_model_path = f"{reload_from}/model.keras"
+            metadata_path = f"{reload_from}/architecture_hyperparms_train_history.pkl"
 
             self.model = keras.models.load_model(
-                f"{reload_from}",
+                keras_model_path,
                 custom_objects={
                     "MyCustomLoss": MyCustomLoss,
                     "SamplingLayer": SamplingLayer,
                 },
+                compile=False,  # assume we'll recompile explicitly
             )
 
-            self.KLD = None  # KL Divergence
-            self.MMD = None  # Maximum Mean Discrepancy
+            self.KLD = None
+            self.MMD = None
 
             [
                 self.encoder,
@@ -58,25 +70,21 @@ class AutoEncoder(FileDirectory):
                 self.architecture,
                 self.hyperparameters,
                 self.history,
-            ] = self._set_class_instances_from_saved_model(reload_from)
+            ] = self._set_class_instances_from_saved_model(metadata_path)
 
             self.architecture["model_name"] = self.model.name
 
         else:
-
             self.architecture = architecture
             self.hyperparameters = hyperparameters
 
             self.encoder = None
-            self.KLD = None  # KL Divergence
-            self.MMD = None  # Maximum Mean Discrepancy
+            self.KLD = None
+            self.MMD = None
             self.decoder = None
             self.model = None
-            # To link encoder with decoder. Define here for documentation
             self.original_input = None
             self.original_output = None
-
-            # Contains training log
             self.history = None
 
             self._build_model()
@@ -101,24 +109,33 @@ class AutoEncoder(FileDirectory):
 
         return [architecture_str, model_name]
 
-    def _set_class_instances_from_saved_model(self, reload_from: str) -> list:
+    def _set_class_instances_from_saved_model(self, metadata_path: str) -> list:
+        """
+        Load encoder, decoder, and training metadata from saved model.
 
-        # Get encoder and decoder
+        Parameters
+        ----------
+        metadata_path : str
+            Full path to the .pkl file containing training metadata.
+
+        Returns
+        -------
+        list
+            [encoder, decoder, architecture, hyperparameters, train_history]
+        """
+
+        encoder = None
+        decoder = None
+
         for submodule in self.model.submodules:
+            if isinstance(submodule, keras.Model):
+                if submodule.name == "encoder":
+                    encoder = submodule
+                elif submodule.name == "decoder":
+                    decoder = submodule
 
-            if submodule.name == "encoder":
-
-                encoder = submodule
-
-            elif submodule.name == "decoder":
-
-                decoder = submodule
-
-        file_location = f"{reload_from}/train_history.pkl"
-        with open(file_location, "rb") as file:
-            parameters = pickle.load(file)
-
-        [architecture, hyperparameters, train_history] = parameters
+        with open(metadata_path, "rb") as file:
+            architecture, hyperparameters, train_history = pickle.load(file)
 
         return [encoder, decoder, architecture, hyperparameters, train_history]
 
@@ -230,18 +247,40 @@ class AutoEncoder(FileDirectory):
         self.model.summary()
 
     def save_model(self, save_to: str) -> None:
-        """Save model with tf and Keras built in fucntionality"""
+        """
+        Save the model and training metadata to the specified directory.
 
-        # There is no need to save the encoder and or decoder
-        # keras.models.Model.sumodules instance has them
+        This method saves the full Keras model to a `.keras` file and stores 
+        training-related information such as architecture, hyperparameters, and 
+        training history in a separate pickle file.
+
+        Files saved:
+            - model.keras : serialized Keras model
+            - architecture_hyperparms_train_history.pkl : training metadata
+
+        Parameters
+        ----------
+        save_to : str
+            Path to the directory where the model and metadata should be saved.
+
+        Notes
+        -----
+        Encoder and decoder models are not saved separately as they are included 
+        in the full model structure and can be accessed as submodules.
+        """
 
         super().check_directory(save_to, exit_program=False)
 
-        self.model.save(save_to)
+
+        keras_model_path = f"{save_to}/model.keras"
+        self.model.save(keras_model_path, save_format="keras")
 
         parameters = [self.architecture, self.hyperparameters, self.history]
 
-        with open(f"{save_to}/train_history.pkl", "wb") as file:
+        with open(
+            f"{save_to}/architecture_hyperparms_train_history.pkl",
+            "wb"
+        ) as file:
             pickle.dump(parameters, file)
 
     def _build_model(self) -> None:
