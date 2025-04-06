@@ -1,13 +1,11 @@
 """Define class to set and reload autoencoders and variational AEs"""
 import pickle
 
-###############################################################################
 import numpy as np
 
-import tensorflow as tf
 import keras
-from keras.models import Model
-from keras.layers import Dense, Input
+from keras import layers
+import tensorflow as tf
 
 from sdss.utils.managefiles import FileDirectory
 from autoencoders.customObjects import MyCustomLoss, SamplingLayer
@@ -29,20 +27,19 @@ class AutoEncoder(FileDirectory):
         hyperparameters: dict = None,
         reload: bool = False,
         reload_from: str = None,
-    ):
+        ):
         """
         Initialize the autoencoder.
 
         Parameters
         ----------
-        architecture : dict, optional
-            Dictionary describing the model architecture (used when not reloading).
-        hyperparameters : dict, optional
-            Dictionary with training hyperparameters (used when not reloading).
-        reload : bool, optional
-            If True, load model and training info from disk.
-        reload_from : str, optional
-            Path to the directory containing model.keras and training metadata.
+        architecture :Dictionary describing the model architecture
+            (used when not reloading).
+        hyperparameters : Dictionary with training hyperparameters
+            (used when not reloading).
+        reload : If True, load model and training info from disk.
+        reload_from : Path to the directory containing model.keras and
+            training metadata.
         """
 
         super().__init__()
@@ -50,7 +47,10 @@ class AutoEncoder(FileDirectory):
         if reload:
 
             keras_model_path = f"{reload_from}/model.keras"
-            metadata_path = f"{reload_from}/architecture_hyperparms_train_history.pkl"
+            metadata_path = (
+                f"{reload_from}/"
+                "architecture_hyperparms_train_history.pkl"
+            )
 
             self.model = keras.models.load_model(
                 keras_model_path,
@@ -58,7 +58,8 @@ class AutoEncoder(FileDirectory):
                     "MyCustomLoss": MyCustomLoss,
                     "SamplingLayer": SamplingLayer,
                 },
-                compile=False,  # assume we'll recompile explicitly
+                # assume we'll recompile explicitly
+                compile=False,  
             )
 
             self.KLD = None
@@ -109,7 +110,9 @@ class AutoEncoder(FileDirectory):
 
         return [architecture_str, model_name]
 
-    def _set_class_instances_from_saved_model(self, metadata_path: str) -> list:
+    def _set_class_instances_from_saved_model(
+        self, metadata_path: str
+        ) -> list:
         """
         Load encoder, decoder, and training metadata from saved model.
 
@@ -265,8 +268,9 @@ class AutoEncoder(FileDirectory):
 
         Notes
         -----
-        Encoder and decoder models are not saved separately as they are included 
-        in the full model structure and can be accessed as submodules.
+        Encoder and decoder models are not saved separately as they are
+            included in the full model structure and can be accessed as
+            submodules.
         """
 
         super().check_directory(save_to, exit_program=False)
@@ -334,7 +338,8 @@ class AutoEncoder(FileDirectory):
             lambda_ = self.hyperparameters["lambda"]
             MMD = (alpha + lambda_ - 1) * self.MMD
 
-            self.model.add_loss([KLD, MMD])
+            self.model.add_loss(KLD)
+            self.model.add_loss(MMD)
 
     def _build_decoder(self):
         """Build decoder"""
@@ -354,7 +359,7 @@ class AutoEncoder(FileDirectory):
 
     def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
 
-        output_layer = Dense(
+        output_layer = layers.Dense(
             units=self.architecture["input_dimensions"],
             activation=self.hyperparameters["output_activation"],
             name="decoder_output",
@@ -396,7 +401,7 @@ class AutoEncoder(FileDirectory):
 
         else:
 
-            z_layer = Dense(
+            z_layer = layers.Dense(
                 units=self.architecture["latent_dimensions"],
                 activation="relu",
                 name="z_deterministic",
@@ -496,7 +501,7 @@ class AutoEncoder(FileDirectory):
             output_tensor:
         """
 
-        layer = Dense(
+        layer = layers.Dense(
             units=number_units,
             activation="relu",
             name=f"{block}_{layer_index + 1:02d}",
@@ -520,13 +525,13 @@ class AutoEncoder(FileDirectory):
             z, z_mean, z_log_var
         """
 
-        mu_layer = Dense(
+        mu_layer = layers.Dense(
             units=self.architecture["latent_dimensions"], name="z_mean"
         )
 
         z_mean = mu_layer(encoder_output)
 
-        log_var_layer = Dense(
+        log_var_layer = layers.Dense(
             units=self.architecture["latent_dimensions"], name="z_log_variance"
         )
 
