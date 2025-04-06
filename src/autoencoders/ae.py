@@ -59,7 +59,7 @@ class AutoEncoder(FileDirectory):
                     "SamplingLayer": SamplingLayer,
                 },
                 # assume we'll recompile explicitly
-                compile=False,  
+                compile=False,
             )
 
             self.KLD = None
@@ -306,7 +306,7 @@ class AutoEncoder(FileDirectory):
 
         MSE = MyCustomLoss(
             name="weighted_MSE",
-            keras_loss=keras.losses.MSE,
+            keras_loss=keras.losses.MeanSquaredError(),
             weight_factor=reconstruction_weight,
         )
 
@@ -330,16 +330,15 @@ class AutoEncoder(FileDirectory):
             self.model.add_metric(self.KLD, name="KLD", aggregation="mean")
             self.model.add_metric(self.MMD, name="MMD", aggregation="mean")
 
-            # prepare KLD for loss
-            alpha = self.hyperparameters["alpha"]
-            KLD = self.KLD * (1 - alpha)
+        # Add weighted KLD and MMD to the loss
+        alpha = self.hyperparameters["alpha"]
+        lambda_ = self.hyperparameters["lambda"]
 
-            # prepare MMD for loss
-            lambda_ = self.hyperparameters["lambda"]
-            MMD = (alpha + lambda_ - 1) * self.MMD
+        KLD_weighted = self.KLD * (1 - alpha)
+        MMD_weighted = (alpha + lambda_ - 1) * self.MMD
 
-            self.model.add_loss(KLD)
-            self.model.add_loss(MMD)
+        self.model.add_loss(KLD_weighted)
+        self.model.add_loss(MMD_weighted)
 
     def _build_decoder(self):
         """Build decoder"""
