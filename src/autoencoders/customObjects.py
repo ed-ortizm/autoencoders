@@ -11,7 +11,7 @@ class SamplingLayer(keras.layers.Layer):
 
     def __init__(self, name: str = "sampleLayer"):
         super().__init__(name=name)
-
+    # pylint: disable=W0221
     def call(self, inputs, *args, **kwargs):
         z_mean, z_log_var = inputs
 

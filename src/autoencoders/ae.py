@@ -1,4 +1,5 @@
 """Define class to set and reload autoencoders and variational AEs"""
+
 import pickle
 
 import numpy as np
@@ -8,8 +9,67 @@ from keras import layers
 import tensorflow as tf
 
 from sdss.utils.managefiles import FileDirectory
-from autoencoders.customObjects import MyCustomLoss, SamplingLayer
+# from autoencoders.customObjects import MyCustomLoss, SamplingLayer
 
+# pylint: disable=W0223
+class SamplingLayer(keras.layers.Layer):
+    """
+    Sampling layer for variational autoencoders.
+    Uses (z_mean, z_log_variance) to sample z from the latent distribution.
+    """
+
+    def __init__(self, name: str = "sampleLayer"):
+        super().__init__(name=name)
+    # pylint: disable=W0221
+    def call(self, inputs, *args, **kwargs):
+        z_mean, z_log_var = inputs
+
+        batch = tf.shape(z_mean)[0]
+        dim = tf.shape(z_mean)[1]
+        epsilon = tf.random.normal(shape=(batch, dim))
+
+        return z_mean + tf.exp(0.5 * z_log_var) * epsilon
+
+    def get_config(self):
+        return {"name": self.name}
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(**config)
+
+class MyCustomLoss(keras.losses.Loss):
+    """
+    Create custom loss function for autoencoders using a built-in
+    Keras loss function (e.g., MeanSquaredError), with a scaling factor.
+    """
+
+    def __init__(
+        self,
+        name: str,
+        keras_loss: keras.losses.Loss,
+        weight_factor: float = 1.0,
+    ):
+        super().__init__(name=name)
+        self.keras_loss = keras_loss
+        self.weight_factor = weight_factor
+
+    def call(self, y_true, y_pred):
+        return self.weight_factor * self.keras_loss(y_true, y_pred)
+
+    def get_config(self):
+        return {
+            "name": self.name,
+            # save class name
+            "keras_loss": self.keras_loss.__class__.__name__,
+            "weight_factor": self.weight_factor,
+        }
+
+    @classmethod
+    def from_config(cls, config):
+        loss_name = config.pop("keras_loss")
+        loss_class = getattr(keras.losses, loss_name)
+        loss_instance = loss_class()
+        return cls(keras_loss=loss_instance, **config)
 
 class AutoEncoder(FileDirectory):
     """
@@ -27,15 +87,15 @@ class AutoEncoder(FileDirectory):
         hyperparameters: dict = None,
         reload: bool = False,
         reload_from: str = None,
-        ):
+    ):
         """
         Initialize the autoencoder.
 
         Parameters
         ----------
-        architecture :Dictionary describing the model architecture
+        architecture: Dictionary describing the model architecture
             (used when not reloading).
-        hyperparameters : Dictionary with training hyperparameters
+        hyperparameters: Dictionary with training hyperparameters
             (used when not reloading).
         reload : If True, load model and training info from disk.
         reload_from : Path to the directory containing model.keras and
@@ -48,8 +108,7 @@ class AutoEncoder(FileDirectory):
 
             keras_model_path = f"{reload_from}/model.keras"
             metadata_path = (
-                f"{reload_from}/"
-                "architecture_hyperparms_train_history.pkl"
+                f"{reload_from}/" "architecture_hyperparms_train_history.pkl"
             )
 
             self.model = keras.models.load_model(
@@ -253,8 +312,8 @@ class AutoEncoder(FileDirectory):
         """
         Save the model and training metadata to the specified directory.
 
-        This method saves the full Keras model to a `.keras` file and stores 
-        training-related information such as architecture, hyperparameters, and 
+        This method saves the full Keras model to a `.keras` file and stores
+        training-related information such as architecture, hyperparameters, and
         training history in a separate pickle file.
 
         Files saved:
@@ -275,16 +334,14 @@ class AutoEncoder(FileDirectory):
 
         super().check_directory(save_to, exit_program=False)
 
-
         keras_model_path = f"{save_to}/model.keras"
         self.model.save(keras_model_path, save_format="keras")
 
         parameters = [self.architecture, self.hyperparameters, self.history]
 
         with open(
-            f"{save_to}/architecture_hyperparms_train_history.pkl",
-            "wb"
-        ) as file:
+            f"{save_to}/architecture_hyperparms_train_history.pkl", "wb"
+            ) as file:
             pickle.dump(parameters, file)
 
     def _build_model(self) -> None:
@@ -310,35 +367,50 @@ class AutoEncoder(FileDirectory):
             weight_factor=reconstruction_weight,
         )
 
-        self.model.compile(optimizer=optimizer, loss=MSE, metrics=["mse"])
+        if self.architecture["is_variational"] is True:
+
+            self.model.compile(
+                optimizer=optimizer,
+                loss={
+                    "reconstruction": MSE,
+                    "kld_loss": lambda y_true, y_pred: tf.reduce_mean(y_pred),
+                    "mmd_loss": lambda y_true, y_pred: tf.reduce_mean(y_pred),
+                },
+                metrics={
+                    "kld_loss": "mean",
+                    "mmd_loss": "mean",
+                }
+            )
+        else:
+            self.model.compile(
+                optimizer=optimizer,
+                loss={"reconstruction": MSE},
+            )
 
     def _build_ae(self):
 
         self.original_output = self.decoder(self.encoder(self.original_input))
 
+        # Build the model with multiple outputs: [reconstruction, KLD, MMD]
         self.model = keras.Model(
-            self.original_input,
-            self.original_output,
+            inputs=self.original_input,
+            outputs={
+                "reconstruction": self.original_output,
+                "kld_loss": self.KLD,
+                "mmd_loss": self.MMD,
+            },
             name=self.architecture["model_name"],
         )
 
-        # Add KLD and MMD here to have a nice print of summary
-        # of encoder and decoder submodules :)
-        if self.architecture["is_variational"] is True:
+        # # Add weighted KLD and MMD to the loss
+        # alpha = self.hyperparameters["alpha"]
+        # lambda_ = self.hyperparameters["lambda"]
 
-            # metrics without weights to chec for correlations
-            self.model.add_metric(self.KLD, name="KLD", aggregation="mean")
-            self.model.add_metric(self.MMD, name="MMD", aggregation="mean")
+        # KLD_weighted = self.KLD * (1 - alpha)
+        # MMD_weighted = (alpha + lambda_ - 1) * self.MMD
 
-        # Add weighted KLD and MMD to the loss
-        alpha = self.hyperparameters["alpha"]
-        lambda_ = self.hyperparameters["lambda"]
-
-        KLD_weighted = self.KLD * (1 - alpha)
-        MMD_weighted = (alpha + lambda_ - 1) * self.MMD
-
-        self.model.add_loss(KLD_weighted)
-        self.model.add_loss(MMD_weighted)
+        # self.model.add_loss(KLD_weighted)
+        # self.model.add_loss(MMD_weighted)
 
     def _build_decoder(self):
         """Build decoder"""
@@ -354,7 +426,7 @@ class AutoEncoder(FileDirectory):
 
         self.decoder = keras.Model(
             decoder_input, decoder_output, name="decoder"
-        )
+            )
 
     def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
 
@@ -380,23 +452,54 @@ class AutoEncoder(FileDirectory):
 
         block_output = self._add_block(encoder_input, block="encoder")
 
+        self.original_input = encoder_input
+
         if self.architecture["is_variational"] is True:
 
             z, z_mean, z_log_var = self._sampling_layer(block_output)
 
-            # Compute KLD
-            self.KLD = -0.5 * tf.reduce_mean(
-                z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1
+            def compute_kld(inputs):
+
+                z_mean, z_log_var = inputs
+                return -0.5 * tf.reduce_mean(
+                    z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
+                    # reduce over features
+                    axis=1,
+                )
+
+            self.KLD = keras.layers.Lambda(compute_kld, name="kld_loss")(
+                [z_mean, z_log_var]
             )
+            # Scale them before model is built
+            alpha = self.hyperparameters["alpha"]
+            
+            self.KLD = keras.layers.Lambda(
+                lambda x: x * (1 - alpha), name="scaled_kld"
+            )(self.KLD)
 
             # Compute MMD
             # true samples from the prior distribution p(z)
             # in our case, here we use a gaussian
-            true_samples = tf.random.normal(
-                tf.stack([200, self.architecture["latent_dimensions"]])
-            )
+            # Defer creation of true_samples to runtime (based on batch size)
+            latent_dim = self.architecture["latent_dimensions"]
 
-            self.MMD = AutoEncoder.compute_mmd(true_samples, z)
+            def create_true_samples(z):
+                batch_size = tf.shape(z)[0]
+                return tf.random.normal([batch_size, latent_dim])
+
+            true_samples_layer = keras.layers.Lambda(
+                create_true_samples, name="true_samples"
+            )(z)
+
+            self.MMD = keras.layers.Lambda(
+                AutoEncoder.compute_mmd_layer, name="mmd_loss"
+            )([true_samples_layer, z])
+
+            lambda_ = self.hyperparameters["lambda"]
+            
+            self.MMD = keras.layers.Lambda(
+                lambda x: x * (alpha + lambda_ - 1), name="scaled_mmd"
+            )(self.MMD)
 
         else:
 
@@ -411,35 +514,26 @@ class AutoEncoder(FileDirectory):
         self.encoder = keras.Model(encoder_input, z, name="encoder")
 
     @staticmethod
-    def compute_kernel(x, y):
-        """Weight of moments between samples of distributions"""
+    def compute_mmd_layer(inputs):
+        """Symbolic version of MMD for Lambda layer"""
+        true_samples, z = inputs
 
-        x_size = tf.shape(x)[0]
-        y_size = tf.shape(y)[0]
-        dim = tf.shape(x)[1]
+        def compute_kernel(x, y):
+            x_size = tf.shape(x)[0]
+            y_size = tf.shape(y)[0]
+            dim = tf.shape(x)[1]
 
-        tiled_x = tf.tile(
-            tf.reshape(x, tf.stack([x_size, 1, dim])), tf.stack([1, y_size, 1])
-        )
+            tiled_x = tf.tile(tf.reshape(x, [x_size, 1, dim]), [1, y_size, 1])
+            tiled_y = tf.tile(tf.reshape(y, [1, y_size, dim]), [x_size, 1, 1])
 
-        tiled_y = tf.tile(
-            tf.reshape(y, tf.stack([1, y_size, dim])), tf.stack([x_size, 1, 1])
-        )
+            return tf.exp(
+                -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
+                / tf.cast(dim, tf.float32)
+            )
 
-        kernel = tf.exp(
-            -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
-            / tf.cast(dim, tf.float32)
-        )
-
-        return kernel
-
-    @staticmethod
-    def compute_mmd(x, y):
-        """Maximun Mean Discrepancy between input samples"""
-
-        x_kernel = AutoEncoder.compute_kernel(x, x)
-        y_kernel = AutoEncoder.compute_kernel(y, y)
-        xy_kernel = AutoEncoder.compute_kernel(x, y)
+        x_kernel = compute_kernel(true_samples, true_samples)
+        y_kernel = compute_kernel(z, z)
+        xy_kernel = compute_kernel(true_samples, z)
 
         mmd = (
             tf.reduce_mean(x_kernel)
@@ -486,7 +580,6 @@ class AutoEncoder(FileDirectory):
         number_units: int,
         block: str,
     ) -> tf.Tensor:
-
         """
         Define and get output of next Dense layer
 
@@ -513,7 +606,6 @@ class AutoEncoder(FileDirectory):
     def _sampling_layer(
         self, encoder_output: tf.Tensor
     ) -> list[tf.Tensor, tf.Tensor, tf.Tensor]:
-
         """
         Sample output of the encoder and add the kl loss
 

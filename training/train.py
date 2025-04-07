@@ -1,7 +1,6 @@
 """Train a single AutoEncoder"""
 import os
 
-###############################################################################
 from configparser import ConfigParser, ExtendedInterpolation
 import time
 
@@ -21,9 +20,9 @@ os.environ["VECLIB_MAXIMUM_THREADS"] = "1"
 os.environ["NUMEXPR_NUM_THREADS"] = "1"
 
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
-###############################################################################
+#########################################################################
 ti = time.time()
-###############################################################################
+########################################################################
 config_handler = ConfigurationFile()
 parser = ConfigParser(interpolation=ExtendedInterpolation())
 parser.read("train.ini")
