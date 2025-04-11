@@ -1,7 +1,7 @@
 """Define class to set and reload autoencoders and variational AEs"""
 
 import pickle
-from typing import Any, Tuple, Optional, Union
+from typing import Any, Tuple, Optional
 
 import numpy as np
 import keras
@@ -182,36 +182,6 @@ class MyCustomLoss(keras.losses.Loss):
         loss_class = getattr(keras.losses, loss_name)
         loss_instance = loss_class()
         return cls(keras_loss=loss_instance, **config)
-
-
-
-# class AutoEncoder:
-#     def __init__(): ...
-#     def _build_model(): ...
-
-#     def _build_encoder(): ...
-#     def _sampling_layer(): ...
-#     def _build_decoder(): ...
-#     def _output_layer(): ...
-#     def _add_block(): ...
-#     def _get_next_dense_layer_output(): ...
-
-#     def _build_ae(): ...
-#     def _compile(): ...
-
-#     def train(): ...
-#     def reconstruct(): ...
-#     def encode(): ...
-#     def decode(): ...
-
-#     def save_model(): ...
-#     def _set_class_instances_from_saved_model(): ...
-
-#     def summary(): ...
-#     def get_architecture_and_model_str(): ...
-
-#     @staticmethod
-#     def compute_mmd(): ...
 
 class AutoEncoder(FileDirectory):
     """
@@ -518,16 +488,17 @@ class AutoEncoder(FileDirectory):
         functional API.
 
         The decoder maps latent vectors back into the input space by applying
-        a sequence of Dense layers followed by an output layer. The architecture
-        of the decoder (e.g., number of layers and units) is defined in the
-        `self.architecture["decoder"]` list.
+        a sequence of Dense layers followed by an output layer.
+        The architecture of the decoder (e.g., number of layers and units) is
+        defined in the `self.architecture["decoder"]` list.
 
         This method assigns the resulting Keras model to `self.decoder`.
 
         Notes
         -----
-        The decoder input shape is determined by the latent dimensionality, and
-        the model output matches the dimensionality of the original spectra.
+        The decoder input shape is determined by the latent dimensionality,
+        and the model output matches the dimensionality of the original
+        spectra.
         """
         decoder_input = keras.Input(
             shape=(self.architecture["latent_dimensions"],),
@@ -542,11 +513,32 @@ class AutoEncoder(FileDirectory):
             inputs=decoder_input,
             outputs=decoder_output,
             name="reconstruction"  # Used for loss targeting during training
-            # name="decoder"  # Alternative name if not targeting reconstruction
+            # name="decoder" # Alternative name if not targeting reconstruction
         )
 
     def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
+        """
+        Construct the final output layer of the decoder.
 
+        Parameters
+        ----------
+        input_tensor : tf.Tensor
+            The input tensor from the last hidden layer of the decoder.
+
+        Returns
+        -------
+        tf.Tensor
+            The output tensor with the same dimensionality as the input
+            spectra.
+            The activation function is specified in the hyperparameters.
+        
+        Notes
+        -----
+        The output layer typically uses a linear or sigmoid activation
+        depending on the data normalization. It ensures the decoder
+        reconstructs outputs matching the shape of the original input
+        data.
+        """
         output_layer = layers.Dense(
             units=self.architecture["input_dimensions"],
             activation=self.hyperparameters["output_activation"],
@@ -557,30 +549,41 @@ class AutoEncoder(FileDirectory):
 
         return output_tensor
 
-    def _add_block(self, input_tensor: tf.Tensor, block: str) -> tf.Tensor:
+    def _add_block(
+        self, input_tensor: tf.Tensor, block: str
+    ) -> tf.Tensor:
         """
-        Build an graph of dense layers
+        Build a sequence of dense layers for the encoder or decoder.
 
-        PARAMETERS
-            input_tensor:
-            block:
+        Parameters
+        ----------
+        input_tensor : tf.Tensor
+            The input tensor to the block, typically from the encoder
+            or decoder input layer.
+        block : str
+            Either "encoder" or "decoder", used to determine the
+            architecture and layer naming.
 
-        OUTPUT
-            x:
+        Returns
+        -------
+        tf.Tensor
+            The output tensor after applying the sequence of dense
+            layers.
+
+        Notes
+        -----
+        The number and size of layers are taken from the architecture
+        dictionary, using either the "encoder" or "decoder" key.
+        Each layer uses a ReLU activation.
         """
         x = input_tensor
 
         if block == "encoder":
-
             block_units = self.architecture["encoder"]
-
         else:
-
             block_units = self.architecture["decoder"]
 
         for layer_index, number_units in enumerate(block_units):
-
-            # in the first iteration, x is the input tensor in the block
             x = AutoEncoder._get_next_dense_layer_output(
                 x, layer_index, number_units, block
             )
@@ -589,37 +592,55 @@ class AutoEncoder(FileDirectory):
 
     @staticmethod
     def _get_next_dense_layer_output(
-        input_tensor: tf.Tensor,  # the output of the previous layer
+        input_tensor: tf.Tensor,
         layer_index: int,
         number_units: int,
         block: str,
     ) -> tf.Tensor:
         """
-        Define and get output of next Dense layer
+        Create and apply a Dense layer to the given input tensor.
 
-        PARAMETERS
-            input_tensor:
-            layer_index:
-            number_units:
-            block:
+        Parameters
+        ----------
+        input_tensor : tf.Tensor
+            The output tensor from the previous layer in the block.
+        layer_index : int
+            The index of the current layer within the block, used for naming.
+        number_units : int
+            The number of units (neurons) in the current Dense layer.
+        block : str
+            Indicates which block the layer belongs to, e.g. "encoder" or
+            "decoder".
 
-        OUTPUT
-            output_tensor:
+        Returns
+        -------
+        tf.Tensor
+            The output tensor after applying the Dense layer.
         """
-
         layer = layers.Dense(
             units=number_units,
             activation="relu",
             name=f"{block}_{layer_index + 1:02d}",
         )
 
-        output_tensor = layer(input_tensor)
+        return layer(input_tensor)
 
-        return output_tensor
+    def _build_ae(self) -> None:
+        """
+        Build the full autoencoder model by connecting the encoder and decoder.
 
+        This method creates a Keras `Model` by chaining the encoder and
+        decoder. If the model is variational, the output includes additional
+        branches for the regularization terms (KLD and MMD), which are required
+        for training and logging but not used for reconstruction.
 
-    def _build_ae(self):
-
+        Sets
+        ----
+        self.original_output : tf.Tensor
+            The reconstructed output tensor produced by the decoder.
+        self.model : keras.Model
+            The full autoencoder model ready for compilation and training.
+        """
         self.original_output = self.decoder(self.encoder(self.original_input))
 
         if self.architecture["is_variational"] is True:
@@ -639,8 +660,24 @@ class AutoEncoder(FileDirectory):
                 name=self.architecture["model_name"],
             )
 
-    def _compile(self):
+    def _compile(self) -> None:
+        """
+        Compile the autoencoder model with optimizer, loss functions,
+        and metrics.
 
+        This method sets up the optimizer and loss structure for the model.
+        If the model is variational, it defines a custom loss for
+        reconstruction using a weighted MSE and uses passthrough losses
+        (which directly forward KLD and MMD values) for the regularization
+        terms. If not variational, only the reconstruction loss is used.
+
+        Notes
+        -----
+        - The passthrough loss function is used to propagate precomputed loss
+        values (KLD and MMD) through the model output without expecting a true
+        label.
+        - Metrics are logged only for the reconstruction branch.
+        """
         optimizer = keras.optimizers.Adam(
             learning_rate=self.hyperparameters["learning_rate"]
         )
@@ -652,8 +689,10 @@ class AutoEncoder(FileDirectory):
             keras_loss=keras.losses.MeanSquaredError(),
             weight_factor=reconstruction_weight,
         )
+
         if self.architecture["is_variational"] is True:
 
+            # Used to treat KLD and MMD as direct loss outputs
             # pylint: disable=W0613
             def passthrough_loss(y_true, y_pred):
                 return tf.reduce_mean(y_pred)
@@ -667,18 +706,43 @@ class AutoEncoder(FileDirectory):
                 },
                 metrics={
                     "reconstruction": ["mse"]
-                    # "kld": ["mean"],
-                    # "mmd": ["mean"],
-                    },
-                )
+                    # Additional metrics can be added here if needed
+                },
+            )
         else:
             self.model.compile(
-                optimizer=optimizer, loss=MSE, metrics=["mse"]
-                )
+                optimizer=optimizer,
+                loss=MSE,
+                metrics=["mse"]
+            )
 
-    def train(self, spectra: np.array) -> keras.callbacks.History:
-        """Train model with spectra array"""
+    def train(self, spectra: np.ndarray) -> keras.callbacks.History:
+        """
+        Train the autoencoder model using the provided input spectra.
 
+        Parameters
+        ----------
+        spectra : np.ndarray
+            The input data to be reconstructed. Each row corresponds to
+            one observed spectrum.
+
+        Returns
+        -------
+        keras.callbacks.History
+            A Keras History object containing the loss and metric values
+            recorded during training.
+
+        Notes
+        -----
+        - Early stopping is used to halt training when the validation
+        loss stops improving.
+        - A learning rate scheduler reduces the learning rate if validation
+        loss plateaus.
+        - If the model is variational, the KLD and MMD targets are dummy zero
+        arrays with the correct shape.
+        - Output layer shapes and names are printed before training begins
+        for verification.
+        """
         stopping_criteria = keras.callbacks.EarlyStopping(
             monitor="val_loss",
             patience=self.hyperparameters["early_stop_patience"],
@@ -697,11 +761,6 @@ class AutoEncoder(FileDirectory):
         )
 
         callbacks = [stopping_criteria, learning_rate_schedule]
-
-        print("Model output names:", self.model.output_names)
-        print("Shapes:")
-        for name, out in zip(self.model.output_names, self.model.outputs):
-            print(f"{name}: shape={out.shape}")
 
         history = self.model.fit(
             x=spectra,
@@ -722,121 +781,144 @@ class AutoEncoder(FileDirectory):
 
         return history
 
-    def reconstruct(self, spectra: np.array) -> np.array:
+    def reconstruct(self, spectra: np.ndarray) -> np.ndarray:
         """
-        Once the VAE is trained, this method is used to obtain
-        the spectra learned by the model
+        Reconstruct input spectra using the trained autoencoder.
 
-        PARAMETERS
-            spectra: contains fluxes of observed spectra
+        This method returns the output of the autoencoder after processing
+        the input spectra. It is typically used to compare the input and 
+        reconstructed spectra during or after training.
 
-        OUTPUTS
-            predicted_spectra: contains generated spectra by the model
-                from observed spectra (input)
+        Parameters
+        ----------
+        spectra : np.ndarray
+            Array of input spectra to be reconstructed by the model.
+
+        Returns
+        -------
+        np.ndarray
+            Reconstructed spectra generated by the autoencoder.
         """
-
         if spectra.ndim == 1:
             spectra = spectra.reshape(1, -1)
 
         predicted_spectra = self.model.predict(spectra, verbose=0)
-
         return predicted_spectra
 
-    def encode(self, spectra: np.array) -> np.array:
+    def encode(self, spectra: np.ndarray) -> np.ndarray:
         """
-        Given an array of observed fluxes, this method outputs the
-        latent representation learned by the VAE onece it is trained
+        Encode input spectra into latent space using the encoder.
 
-        PARAMETERS
-            spectra: contains fluxes of observed spectra
+        This method projects observed input spectra into the learned
+        latent representation of the autoencoder.
 
-        OUTPUTS
-            z: contains latent representation of the observed fluxes
+        Parameters
+        ----------
+        spectra : np.ndarray
+            Input spectra array (1D or 2D) with observed fluxes.
 
+        Returns
+        -------
+        np.ndarray
+            Latent space representations of the input spectra.
         """
-
         if spectra.ndim == 1:
             spectra = spectra.reshape(1, -1)
 
         z = self.encoder.predict(spectra, verbose=0)
-
         return z
 
-    def decode(self, z: np.array) -> np.array:
+    def decode(self, z: np.ndarray) -> np.ndarray:
         """
+        Decode latent vectors into spectra using the decoder.
 
-        Given a set of points in latent space, this method outputs
-        spectra according to the representation learned by the VAE
-        onece it is trained
+        This method transforms latent representations back into
+        the reconstructed spectral space learned by the model.
 
-        PARAMETERS
-            z: contains a set of latent representation
+        Parameters
+        ----------
+        z : np.ndarray
+            Latent vectors to be decoded (1D or 2D array).
 
-        OUTPUTS
-            spectra: contains fluxes of spectra built by the model
-
+        Returns
+        -------
+        np.ndarray
+            Spectra reconstructed from the latent space.
         """
-
         if z.ndim == 1:
             z = z.reshape(1, -1)
 
         spectra = self.decoder.predict(z)
-
         return spectra
 
     def save_model(self, save_to: str) -> None:
         """
-        Save the model and training metadata to the specified directory.
+        Save the trained autoencoder model and metadata to disk.
 
-        This method saves the full Keras model to a `.keras` file and stores
-        training-related information such as architecture, hyperparameters, and
-        training history in a separate pickle file.
-
-        Files saved:
-            - model.keras : serialized Keras model
-            - architecture_hyperparms_train_history.pkl : training metadata
+        This method writes the trained Keras model to a `.keras` file and 
+        stores relevant training metadata (such as model architecture, 
+        hyperparameters, and training history) in a separate pickle file.
 
         Parameters
         ----------
         save_to : str
-            Path to the directory where the model and metadata should be saved.
+            Path to the directory where the model and associated metadata
+            should be saved. If the directory does not exist, it will be
+            created.
+
+        Files Saved
+        -----------
+        model.keras : str
+            Serialized Keras model file.
+        architecture_hyperparms_train_history.pkl : str
+            Pickle file containing architecture, hyperparameters,
+            and training history.
 
         Notes
         -----
-        Encoder and decoder models are not saved separately as they are
-            included in the full model structure and can be accessed as
-            submodules.
+        The encoder and decoder models are not saved separately, as they are
+        embedded as submodules within the full model and can be retrieved
+        after loading.
         """
-
         super().check_directory(save_to, exit_program=False)
 
         keras_model_path = f"{save_to}/model.keras"
         self.model.save(keras_model_path)
 
         parameters = [self.architecture, self.hyperparameters, self.history]
-
         with open(
-            f"{save_to}/architecture_hyperparms_train_history.pkl", "wb"
-            ) as file:
+            f"{save_to}/architecture_hyperparms_train_history.pkl",
+            "wb"
+        ) as file:
             pickle.dump(parameters, file)
 
     def _set_class_instances_from_saved_model(
         self, metadata_path: str
     ) -> list:
         """
-        Load encoder, decoder, and training metadata from saved model.
+        Load encoder, decoder, and training metadata from a previously
+        saved model.
+
+        This method parses the full model's submodules to retrieve the
+        encoder and decoder components. It also loads the associated
+        architecture and training metadata from a pickle file.
 
         Parameters
         ----------
         metadata_path : str
-            Full path to the .pkl file containing training metadata.
+            Full path to the pickle file containing saved architecture, 
+            hyperparameters, and training history.
 
         Returns
         -------
         list
-            [encoder, decoder, architecture, hyperparameters, train_history]
+            A list containing:
+            - encoder (keras.Model)
+            - decoder (keras.Model)
+            - architecture (dict)
+            - hyperparameters (dict)
+            - train_history (dict)
         """
-
         encoder = None
         decoder = None
 
@@ -852,18 +934,31 @@ class AutoEncoder(FileDirectory):
 
         return [encoder, decoder, architecture, hyperparameters, train_history]
 
-    def summary(self):
-        """Return Keras buitl int summary of Model class"""
+    def summary(self) -> None:
+        """
+        Print a summary of the encoder, decoder, and full model.
+
+        This method provides an overview of the model structure,
+        including input/output shapes and layer configurations,
+        for debugging and inspection.
+        """
         self.encoder.summary()
         self.decoder.summary()
         self.model.summary()
 
-    def get_architecture_and_model_str(self) -> list:
+    def get_architecture_and_model_str(self) -> list[str]:
         """
-        Retrieve model architecture and name, e.g:
-        [512_256_10_256_512, infoVae_rec_3458_alpha_1_lambda_10
-        """
+        Construct string representations of the model architecture and name.
 
+        Returns
+        -------
+        list[str]
+            A list with two elements:
+            - A string describing the full architecture, e.g.,
+            "512_256_10_256_512"
+            - A string uniquely naming the model with its key hyperparameters,
+            e.g., "infoVae_rec_3458_alpha_1_lambda_10"
+        """
         architecture_str = self.architecture["encoder"]
         architecture_str += [self.architecture["latent_dimensions"]]
         architecture_str += self.architecture["decoder"]
