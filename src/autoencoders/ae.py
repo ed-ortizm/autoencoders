@@ -325,67 +325,6 @@ class AutoEncoder(FileDirectory):
         self._build_ae()
         self._compile()
 
-    # def _build_encoder(self):
-        # """Build encoder"""
-
-        # encoder_input = keras.Input(
-        #     shape=(self.architecture["input_dimensions"],),
-        #     name="encoder_input",
-        # )
-        # self.original_input = encoder_input
-
-        # block_output = self._add_block(encoder_input, block="encoder")
-
-        # if self.architecture["is_variational"]:
-        #     z, z_mean, z_log_var = self._sampling_layer(block_output)
-
-        #     def compute_kld(inputs):
-        #         z_mean, z_log_var = inputs
-        #         return -0.5 * tf.reduce_mean(
-        #             z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
-        #             axis=1,
-        #         )
-
-        #     raw_kld = keras.layers.Lambda(
-        #         compute_kld, name="kld_loss"
-        #         )([z_mean, z_log_var])
-
-        #     latent_dim = self.architecture["latent_dimensions"]
-
-        #     def create_true_samples(z):
-        #         batch_size = tf.shape(z)[0]
-        #         return tf.random.normal([batch_size, latent_dim])
-
-        #     true_samples_layer = keras.layers.Lambda(
-        #         create_true_samples, name="true_samples"
-        #     )(z)
-
-        #     raw_mmd = keras.layers.Lambda(
-        #         AutoEncoder.compute_mmd, name="mmd_loss"
-        #     )([true_samples_layer, z])
-
-        #     alpha = self.hyperparameters["alpha"]
-        #     lambda_ = self.hyperparameters["lambda"]
-
-        #     self.KLD = keras.layers.Lambda(
-        #         lambda x: x * (1 - alpha), name="kld"
-        #         )(raw_kld)
-
-        #     self.MMD = keras.layers.Lambda(
-        #         lambda x: x * (alpha + lambda_ - 1),
-        #         name="mmd"
-        #         )(raw_mmd)
-
-        # else:
-        #     z_layer = layers.Dense(
-        #         units=self.architecture["latent_dimensions"],
-        #         activation="relu",
-        #         name="z_deterministic",
-        #     )
-        #     z = z_layer(block_output)
-
-        # self.encoder = keras.Model(encoder_input, z, name="encoder")
-
     def _build_encoder(self) -> None:
         """
         Construct the encoder submodel of the AutoEncoder.
@@ -468,25 +407,32 @@ class AutoEncoder(FileDirectory):
         self, encoder_output: tf.Tensor
     ) -> list[tf.Tensor, tf.Tensor, tf.Tensor]:
         """
-        Sample output of the encoder and add the kl loss
+        Generate latent space samples for a variational autoencoder.
 
-        PARAMETERS
-            encoder_output:
+        Applies the reparameterization trick using the encoder's output
+        to produce stochastic latent vectors `z`.
 
-        OUTPUT
-            z, z_mean, z_log_var
+        Parameters
+        ----------
+        encoder_output : tf.Tensor
+            Output of the dense layers in the encoder.
+
+        Returns
+        -------
+        list of tf.Tensor
+            A list containing:
+                - z : Sampled latent vector
+                - z_mean : Mean of the latent distribution
+                - z_log_var : Log variance of the latent distribution
         """
-
         mu_layer = layers.Dense(
             units=self.architecture["latent_dimensions"], name="z_mean"
         )
-
         z_mean = mu_layer(encoder_output)
 
         log_var_layer = layers.Dense(
             units=self.architecture["latent_dimensions"], name="z_log_variance"
         )
-
         z_log_var = log_var_layer(encoder_output)
 
         sampling_inputs = (z_mean, z_log_var)
