@@ -183,6 +183,80 @@ class MyCustomLoss(keras.losses.Loss):
         loss_instance = loss_class()
         return cls(keras_loss=loss_instance, **config)
 
+@keras.saving.register_keras_serializable()
+def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
+    """
+    Compute the symbolic Maximum Mean Discrepancy (MMD) loss between the
+    approximate posterior q(z) and a prior p(z) using the kernel method.
+
+    Parameters
+    ----------
+    inputs : list of tf.Tensor
+        A list containing two tensors:
+        - true_samples: Samples drawn from the prior distribution p(z)
+        - z: Latent vectors sampled from q(z|x)
+
+    Returns
+    -------
+    tf.Tensor
+        A symbolic tensor of shape (batch_size, 1) with a constant MMD
+        value repeated across the batch.
+    """
+    true_samples, z = inputs
+
+    def compute_kernel(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
+        x_size = tf.shape(x)[0]
+        y_size = tf.shape(y)[0]
+        dim = tf.shape(x)[1]
+
+        tiled_x = tf.tile(tf.reshape(x, [x_size, 1, dim]), [1, y_size, 1])
+        tiled_y = tf.tile(tf.reshape(y, [1, y_size, dim]), [x_size, 1, 1])
+
+        return tf.exp(
+            -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
+            / tf.cast(dim, tf.float32)
+        )
+
+    x_kernel = compute_kernel(true_samples, true_samples)
+    y_kernel = compute_kernel(z, z)
+    xy_kernel = compute_kernel(true_samples, z)
+
+    mmd = (
+        tf.reduce_mean(x_kernel)
+        + tf.reduce_mean(y_kernel)
+        - 2 * tf.reduce_mean(xy_kernel)
+    )
+
+    return tf.ones_like(z[:, 0]) * mmd
+
+@keras.saving.register_keras_serializable()
+def create_true_samples(z: tf.Tensor) -> tf.Tensor:
+    """Generate samples from the prior (standard normal) for MMD computation."""
+    batch_size = tf.shape(z)[0]
+    latent_dim = tf.shape(z)[1]
+    return tf.random.normal([batch_size, latent_dim])
+
+@keras.saving.register_keras_serializable()
+def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
+    """Compute KL divergence from latent mean and log variance."""
+    z_mean, z_log_var = inputs
+    return -0.5 * tf.reduce_mean(
+        z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
+        axis=1,
+    )
+
+@keras.saving.register_keras_serializable()
+def scale_kld(x, alpha):
+    return x * (1 - alpha)
+
+@keras.saving.register_keras_serializable()
+def scale_mmd(x, alpha, lambda_):
+    return x * (alpha + lambda_ - 1)
+
+@keras.saving.register_keras_serializable()
+def passthrough_loss(y_true, y_pred):
+    return tf.reduce_mean(y_pred)
+
 class AutoEncoder(FileDirectory):
     """
     AutoEncoder class supporting both standard and variational architectures
@@ -253,6 +327,7 @@ class AutoEncoder(FileDirectory):
                     "SamplingLayer": SamplingLayer,
                 },
                 compile=False,  # Recompilation will happen later
+                safe_mode=False
             )
 
             self.KLD = None
@@ -325,42 +400,35 @@ class AutoEncoder(FileDirectory):
         if self.architecture["is_variational"]:
             z, z_mean, z_log_var = self._sampling_layer(block_output)
 
-            # Compute KL divergence
-            def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
-                z_mean, z_log_var = inputs
-                return -0.5 * tf.reduce_mean(
-                    z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
-                    axis=1,  # Reduce over feature dimensions only
-                )
-
             raw_kld = keras.layers.Lambda(
-                compute_kld, name="kld_loss"
+                compute_kld, name="kld_loss",
+                output_shape=(None,)
             )([z_mean, z_log_var])
 
-            latent_dim = self.architecture["latent_dimensions"]
-
-            # Sample from the prior for MMD
-            def create_true_samples(z: tf.Tensor) -> tf.Tensor:
-                batch_size = tf.shape(z)[0]
-                return tf.random.normal([batch_size, latent_dim])
-
             true_samples_layer = keras.layers.Lambda(
-                create_true_samples, name="true_samples"
+                create_true_samples, name="true_samples",
+                output_shape=(self.architecture["latent_dimensions"],),
             )(z)
 
+            # raw_mmd = keras.layers.Lambda(
+            #     AutoEncoder.compute_mmd, name="mmd_loss"
+            # )([true_samples_layer, z])
             raw_mmd = keras.layers.Lambda(
-                AutoEncoder.compute_mmd, name="mmd_loss"
+                compute_mmd, name="mmd_loss",
+                output_shape=(None,),  # broadcasted to match batch size
             )([true_samples_layer, z])
 
             alpha = self.hyperparameters["alpha"]
             lambda_ = self.hyperparameters["lambda"]
 
             self.KLD = keras.layers.Lambda(
-                lambda x: x * (1 - alpha), name="kld"
+                lambda x: scale_kld(x, alpha), name="kld",
+                output_shape=(None,)
             )(raw_kld)
 
             self.MMD = keras.layers.Lambda(
-                lambda x: x * (alpha + lambda_ - 1), name="mmd"
+                lambda x: scale_mmd(x, alpha, lambda_), name="mmd",
+                output_shape=(None,),  # broadcasted to match batch size
             )(raw_mmd)
 
         else:
@@ -412,75 +480,75 @@ class AutoEncoder(FileDirectory):
 
         return z, z_mean, z_log_var
 
-    @staticmethod
-    def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
-        """
-        Compute the symbolic Maximum Mean Discrepancy (MMD) loss between the
-        approximate posterior q(z) and a prior p(z) using the kernel method.
+    # @staticmethod
+    # def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
+    #     """
+    #     Compute the symbolic Maximum Mean Discrepancy (MMD) loss between the
+    #     approximate posterior q(z) and a prior p(z) using the kernel method.
 
-        This method is intended to be used inside a Lambda layer, allowing it
-        to participate in the computational graph as a symbolic loss term.
+    #     This method is intended to be used inside a Lambda layer, allowing it
+    #     to participate in the computational graph as a symbolic loss term.
 
-        Parameters
-        ----------
-        inputs : list of tf.Tensor
-            A list containing two tensors:
-            - true_samples: Samples drawn from the prior distribution p(z)
-            - z: Latent vectors sampled from the approximate posteriorq(z|x)
+    #     Parameters
+    #     ----------
+    #     inputs : list of tf.Tensor
+    #         A list containing two tensors:
+    #         - true_samples: Samples drawn from the prior distribution p(z)
+    #         - z: Latent vectors sampled from the approximate posteriorq(z|x)
 
-        Returns
-        -------
-        tf.Tensor
-            A symbolic tensor of shape (batch_size, 1) with a constant MMD
-            value repeated across the batch, so it integrates seamlessly
-            into Keras loss API.
+    #     Returns
+    #     -------
+    #     tf.Tensor
+    #         A symbolic tensor of shape (batch_size, 1) with a constant MMD
+    #         value repeated across the batch, so it integrates seamlessly
+    #         into Keras loss API.
 
-        Notes
-        -----
-        This implementation uses a Gaussian kernel to compare distributions.
-        The MMD value is broadcasted per sample so that Keras can average it
-        correctly when used with custom loss functions.
-        """
-        true_samples, z = inputs
+    #     Notes
+    #     -----
+    #     This implementation uses a Gaussian kernel to compare distributions.
+    #     The MMD value is broadcasted per sample so that Keras can average it
+    #     correctly when used with custom loss functions.
+    #     """
+    #     true_samples, z = inputs
 
-        def compute_kernel(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
-            """
-            Compute pairwise Gaussian kernel between two batches of vectors.
+    #     def compute_kernel(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
+    #         """
+    #         Compute pairwise Gaussian kernel between two batches of vectors.
 
-            Parameters
-            ----------
-            x, y : tf.Tensor
-                Tensors of shape (batch_size, latent_dim)
+    #         Parameters
+    #         ----------
+    #         x, y : tf.Tensor
+    #             Tensors of shape (batch_size, latent_dim)
 
-            Returns
-            -------
-            tf.Tensor
-                Kernel matrix of shape (batch_size, batch_size)
-            """
-            x_size = tf.shape(x)[0]
-            y_size = tf.shape(y)[0]
-            dim = tf.shape(x)[1]
+    #         Returns
+    #         -------
+    #         tf.Tensor
+    #             Kernel matrix of shape (batch_size, batch_size)
+    #         """
+    #         x_size = tf.shape(x)[0]
+    #         y_size = tf.shape(y)[0]
+    #         dim = tf.shape(x)[1]
 
-            tiled_x = tf.tile(tf.reshape(x, [x_size, 1, dim]), [1, y_size, 1])
-            tiled_y = tf.tile(tf.reshape(y, [1, y_size, dim]), [x_size, 1, 1])
+    #         tiled_x = tf.tile(tf.reshape(x, [x_size, 1, dim]), [1, y_size, 1])
+    #         tiled_y = tf.tile(tf.reshape(y, [1, y_size, dim]), [x_size, 1, 1])
 
-            return tf.exp(
-                -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
-                / tf.cast(dim, tf.float32)
-            )
+    #         return tf.exp(
+    #             -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
+    #             / tf.cast(dim, tf.float32)
+    #         )
 
-        x_kernel = compute_kernel(true_samples, true_samples)
-        y_kernel = compute_kernel(z, z)
-        xy_kernel = compute_kernel(true_samples, z)
+    #     x_kernel = compute_kernel(true_samples, true_samples)
+    #     y_kernel = compute_kernel(z, z)
+    #     xy_kernel = compute_kernel(true_samples, z)
 
-        mmd = (
-            tf.reduce_mean(x_kernel)
-            + tf.reduce_mean(y_kernel)
-            - 2 * tf.reduce_mean(xy_kernel)
-        )
+    #     mmd = (
+    #         tf.reduce_mean(x_kernel)
+    #         + tf.reduce_mean(y_kernel)
+    #         - 2 * tf.reduce_mean(xy_kernel)
+    #     )
 
-        # Return broadcasted value to match expected shape for loss
-        return tf.ones_like(z[:, :1]) * mmd
+    #     # Return broadcasted value to match expected shape for loss
+    #     return tf.ones_like(z[:, :1]) * mmd
 
     def _build_decoder(self) -> None:
         """
@@ -694,8 +762,8 @@ class AutoEncoder(FileDirectory):
 
             # Used to treat KLD and MMD as direct loss outputs
             # pylint: disable=W0613
-            def passthrough_loss(y_true, y_pred):
-                return tf.reduce_mean(y_pred)
+            # def passthrough_loss(y_true, y_pred):
+            #     return tf.reduce_mean(y_pred)
 
             self.model.compile(
                 optimizer=optimizer,
@@ -892,42 +960,29 @@ class AutoEncoder(FileDirectory):
         ) as file:
             pickle.dump(parameters, file)
 
-    def _set_class_instances_from_saved_model(
-        self, metadata_path: str
-    ) -> list:
+    def _set_class_instances_from_saved_model(self, metadata_path: str) -> list:
         """
-        Load encoder, decoder, and training metadata from a previously
-        saved model.
-
-        This method parses the full model's submodules to retrieve the
-        encoder and decoder components. It also loads the associated
-        architecture and training metadata from a pickle file.
+        Load encoder, decoder, and training metadata from saved model.
 
         Parameters
         ----------
         metadata_path : str
-            Full path to the pickle file containing saved architecture, 
-            hyperparameters, and training history.
+            Full path to the .pkl file containing training metadata.
 
         Returns
         -------
         list
-            A list containing:
-            - encoder (keras.Model)
-            - decoder (keras.Model)
-            - architecture (dict)
-            - hyperparameters (dict)
-            - train_history (dict)
+            [encoder, decoder, architecture, hyperparameters, train_history]
         """
         encoder = None
         decoder = None
 
-        for submodule in self.model.submodules:
-            if isinstance(submodule, keras.Model):
-                if submodule.name == "encoder":
-                    encoder = submodule
-                elif submodule.name == "decoder":
-                    decoder = submodule
+        for layer in self.model.layers:
+            if isinstance(layer, keras.Model):
+                if layer.name == "encoder":
+                    encoder = layer
+                elif layer.name == "reconstruction":  # or "decoder" if you change the name
+                    decoder = layer
 
         with open(metadata_path, "rb") as file:
             architecture, hyperparameters, train_history = pickle.load(file)
