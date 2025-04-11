@@ -1,7 +1,7 @@
 """Define class to set and reload autoencoders and variational AEs"""
 
 import pickle
-from typing import Any, Tuple
+from typing import Any, Tuple, Optional, Union
 
 import numpy as np
 import keras
@@ -183,44 +183,97 @@ class MyCustomLoss(keras.losses.Loss):
         loss_instance = loss_class()
         return cls(keras_loss=loss_instance, **config)
 
+
+
+# class AutoEncoder:
+#     def __init__(): ...
+#     def _build_model(): ...
+
+#     def _build_encoder(): ...
+#     def _sampling_layer(): ...
+#     def _build_decoder(): ...
+#     def _output_layer(): ...
+#     def _add_block(): ...
+#     def _get_next_dense_layer_output(): ...
+
+#     def _build_ae(): ...
+#     def _compile(): ...
+
+#     def train(): ...
+#     def reconstruct(): ...
+#     def encode(): ...
+#     def decode(): ...
+
+#     def save_model(): ...
+#     def _set_class_instances_from_saved_model(): ...
+
+#     def summary(): ...
+#     def get_architecture_and_model_str(): ...
+
+#     @staticmethod
+#     def compute_mmd_layer(): ...
+
 class AutoEncoder(FileDirectory):
     """
-    Create an AE model using the keras functional API, where custom
-    layers are created by subclassing keras.layers.Layer, the same
-    applies for custom metrics and losses.
+    AutoEncoder class supporting both standard and variational architectures
+    using the Keras Functional API.
 
-    For all custom objects, the .get_config method is implemented to
-    be able to serialize and clone the model.
+    This class builds encoder-decoder models with optional KL-divergence and
+    Maximum Mean Discrepancy (MMD) regularizations for variational modeling.
+    It supports serialization, training, and latent space manipulation.
+
+    Attributes
+    ----------
+    architecture : dict
+        Dictionary describing the model architecture.
+    hyperparameters : dict
+        Dictionary of hyperparameters used during training.
+    model : keras.Model
+        Compiled Keras model instance.
+    encoder : keras.Model
+        The encoder part of the autoencoder.
+    decoder : keras.Model
+        The decoder part of the autoencoder.
+    original_input : tf.Tensor
+        The original input placeholder for the Keras model.
+    original_output : tf.Tensor
+        The decoded output tensor of the model.
+    KLD : Optional[tf.Tensor]
+        KL divergence loss tensor (if variational).
+    MMD : Optional[tf.Tensor]
+        Maximum Mean Discrepancy loss tensor (if variational).
+    history : Optional[dict]
+        Dictionary storing training history.
     """
 
     def __init__(
         self,
-        architecture: dict = None,
-        hyperparameters: dict = None,
+        architecture: Optional[dict] = None,
+        hyperparameters: Optional[dict] = None,
         reload: bool = False,
-        reload_from: str = None,
-    ):
+        reload_from: Optional[str] = None,
+    ) -> None:
         """
-        Initialize the autoencoder.
+        Initialize the AutoEncoder. Either builds a new model from scratch
+        or loads it from saved files if `reload` is True.
 
         Parameters
         ----------
-        architecture: Dictionary describing the model architecture
-            (used when not reloading).
-        hyperparameters: Dictionary with training hyperparameters
-            (used when not reloading).
-        reload : If True, load model and training info from disk.
-        reload_from : Path to the directory containing model.keras and
-            training metadata.
+        architecture : dict, optional
+            Dictionary describing encoder/decoder layout and VAE flag.
+        hyperparameters : dict, optional
+            Dictionary of hyperparameters for training.
+        reload : bool, default=False
+            If True, loads model and training metadata from disk.
+        reload_from : str, optional
+            Path to the directory containing saved model and metadata.
         """
-
         super().__init__()
 
         if reload:
-
             keras_model_path = f"{reload_from}/model.keras"
             metadata_path = (
-                f"{reload_from}/" "architecture_hyperparms_train_history.pkl"
+                f"{reload_from}/architecture_hyperparms_train_history.pkl"
             )
 
             self.model = keras.models.load_model(
@@ -229,8 +282,7 @@ class AutoEncoder(FileDirectory):
                     "MyCustomLoss": MyCustomLoss,
                     "SamplingLayer": SamplingLayer,
                 },
-                # assume we'll recompile explicitly
-                compile=False,
+                compile=False,  # Recompilation will happen later
             )
 
             self.KLD = None
@@ -251,15 +303,27 @@ class AutoEncoder(FileDirectory):
             self.hyperparameters = hyperparameters
 
             self.encoder = None
-            self.KLD = None
-            self.MMD = None
             self.decoder = None
             self.model = None
             self.original_input = None
             self.original_output = None
+            self.KLD = None
+            self.MMD = None
             self.history = None
 
             self._build_model()
+
+    def _build_model(self) -> None:
+        """
+        Constructs the full autoencoder model.
+
+        This method sequentially builds the encoder, decoder,
+        connects them to form the full model, and compiles it.
+        """
+        self._build_encoder()
+        self._build_decoder()
+        self._build_ae()
+        self._compile()
 
     def get_architecture_and_model_str(self) -> list:
         """
