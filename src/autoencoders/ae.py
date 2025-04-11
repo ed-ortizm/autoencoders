@@ -211,7 +211,7 @@ class MyCustomLoss(keras.losses.Loss):
 #     def get_architecture_and_model_str(): ...
 
 #     @staticmethod
-#     def compute_mmd_layer(): ...
+#     def compute_mmd(): ...
 
 class AutoEncoder(FileDirectory):
     """
@@ -325,57 +325,395 @@ class AutoEncoder(FileDirectory):
         self._build_ae()
         self._compile()
 
-    def get_architecture_and_model_str(self) -> list:
+    # def _build_encoder(self):
+        # """Build encoder"""
+
+        # encoder_input = keras.Input(
+        #     shape=(self.architecture["input_dimensions"],),
+        #     name="encoder_input",
+        # )
+        # self.original_input = encoder_input
+
+        # block_output = self._add_block(encoder_input, block="encoder")
+
+        # if self.architecture["is_variational"]:
+        #     z, z_mean, z_log_var = self._sampling_layer(block_output)
+
+        #     def compute_kld(inputs):
+        #         z_mean, z_log_var = inputs
+        #         return -0.5 * tf.reduce_mean(
+        #             z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
+        #             axis=1,
+        #         )
+
+        #     raw_kld = keras.layers.Lambda(
+        #         compute_kld, name="kld_loss"
+        #         )([z_mean, z_log_var])
+
+        #     latent_dim = self.architecture["latent_dimensions"]
+
+        #     def create_true_samples(z):
+        #         batch_size = tf.shape(z)[0]
+        #         return tf.random.normal([batch_size, latent_dim])
+
+        #     true_samples_layer = keras.layers.Lambda(
+        #         create_true_samples, name="true_samples"
+        #     )(z)
+
+        #     raw_mmd = keras.layers.Lambda(
+        #         AutoEncoder.compute_mmd, name="mmd_loss"
+        #     )([true_samples_layer, z])
+
+        #     alpha = self.hyperparameters["alpha"]
+        #     lambda_ = self.hyperparameters["lambda"]
+
+        #     self.KLD = keras.layers.Lambda(
+        #         lambda x: x * (1 - alpha), name="kld"
+        #         )(raw_kld)
+
+        #     self.MMD = keras.layers.Lambda(
+        #         lambda x: x * (alpha + lambda_ - 1),
+        #         name="mmd"
+        #         )(raw_mmd)
+
+        # else:
+        #     z_layer = layers.Dense(
+        #         units=self.architecture["latent_dimensions"],
+        #         activation="relu",
+        #         name="z_deterministic",
+        #     )
+        #     z = z_layer(block_output)
+
+        # self.encoder = keras.Model(encoder_input, z, name="encoder")
+
+    def _build_encoder(self) -> None:
+    #     """
+    #     Construct the encoder submodel of the AutoEncoder.
+
+    #     If the model is variational, computes additional symbolic layers
+    #     for KL divergence (KLD) and Maximum Mean Discrepancy (MMD),
+    #     which are later integrated into the full model as losses.
+
+    #     Sets
+    #     ----
+    #     self.encoder : keras.Model
+    #         Compiled encoder model.
+    #     self.original_input : tf.Tensor
+    #         Input placeholder used to build the full autoencoder.
+    #     self.KLD : tf.Tensor
+    #         Symbolic tensor for KL divergence loss (if variational).
+    #     self.MMD : tf.Tensor
+    #         Symbolic tensor for MMD loss (if variational).
+    #     """
+    #     encoder_input = keras.Input(
+    #         shape=(self.architecture["input_dimensions"],),
+    #         name="encoder_input",
+    #     )
+    #     self.original_input = encoder_input
+
+    #     block_output = self._add_block(encoder_input, block="encoder")
+
+    #     if self.architecture["is_variational"]:
+    #         z, z_mean, z_log_var = self._sampling_layer(block_output)
+
+    #         # Compute KL divergence
+    #         def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
+    #             z_mean, z_log_var = inputs
+    #             return -0.5 * tf.reduce_mean(
+    #                 z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
+    #                 axis=1,  # Reduce over feature dimensions only
+    #             )
+
+    #         raw_kld = keras.layers.Lambda(
+    #             compute_kld, name="kld_loss"
+    #         )([z_mean, z_log_var])
+
+    #         latent_dim = self.architecture["latent_dimensions"]
+
+    #         # Sample from the prior for MMD
+    #         def create_true_samples(z: tf.Tensor) -> tf.Tensor:
+    #             batch_size = tf.shape(z)[0]
+    #             return tf.random.normal([batch_size, latent_dim])
+
+    #         true_samples_layer = keras.layers.Lambda(
+    #             create_true_samples, name="true_samples"
+    #         )(z)
+
+    #         raw_mmd = keras.layers.Lambda(
+    #             AutoEncoder.compute_mmd, name="mmd_loss"
+    #         )([true_samples_layer, z])
+
+    #         alpha = self.hyperparameters["alpha"]
+    #         lambda_ = self.hyperparameters["lambda"]
+
+    #         self.KLD = keras.layers.Lambda(
+    #             lambda x: x * (1 - alpha), name="kld"
+    #         )(raw_kld)
+
+    #         self.MMD = keras.layers.Lambda(
+    #             lambda x: x * (alpha + lambda_ - 1), name="mmd"
+    #         )(raw_mmd)
+
+    #     else:
+    #         z_layer = layers.Dense(
+    #             units=self.architecture["latent_dimensions"],
+    #             activation="relu",
+    #             name="z_deterministic",
+    #         )
+    #         z = z_layer(block_output)
+
+    #     self.encoder = keras.Model(encoder_input, z, name="encoder")
+
+    def _sampling_layer(
+        self, encoder_output: tf.Tensor
+    ) -> list[tf.Tensor, tf.Tensor, tf.Tensor]:
         """
-        Retrieve model architecture and name, e.g:
-        [512_256_10_256_512, infoVae_rec_3458_alpha_1_lambda_10
+        Sample output of the encoder and add the kl loss
+
+        PARAMETERS
+            encoder_output:
+
+        OUTPUT
+            z, z_mean, z_log_var
         """
 
-        architecture_str = self.architecture["encoder"]
-        architecture_str += [self.architecture["latent_dimensions"]]
-        architecture_str += self.architecture["decoder"]
-        architecture_str = "_".join(str(unit) for unit in architecture_str)
-
-        model_name = (
-            f"{self.architecture['model_name']}"
-            f"_rec_{self.hyperparameters['reconstruction_weight']:1.0f}"
-            f"_alpha_{self.hyperparameters['alpha']:1.0f}"
-            f"_lambda_{self.hyperparameters['lambda']:1.0f}"
+        mu_layer = layers.Dense(
+            units=self.architecture["latent_dimensions"], name="z_mean"
         )
 
-        return [architecture_str, model_name]
+        z_mean = mu_layer(encoder_output)
 
-    def _set_class_instances_from_saved_model(
-        self, metadata_path: str
-        ) -> list:
+        log_var_layer = layers.Dense(
+            units=self.architecture["latent_dimensions"], name="z_log_variance"
+        )
+
+        z_log_var = log_var_layer(encoder_output)
+
+        sampling_inputs = (z_mean, z_log_var)
+        sample_layer = SamplingLayer(name="z_variational")
+
+        z = sample_layer(sampling_inputs)
+
+        return z, z_mean, z_log_var
+
+    @staticmethod
+    def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
         """
-        Load encoder, decoder, and training metadata from saved model.
+        Compute the symbolic Maximum Mean Discrepancy (MMD) loss between the
+        approximate posterior q(z) and a prior p(z) using the kernel method.
+
+        This method is intended to be used inside a Lambda layer, allowing it
+        to participate in the computational graph as a symbolic loss term.
 
         Parameters
         ----------
-        metadata_path : str
-            Full path to the .pkl file containing training metadata.
+        inputs : list of tf.Tensor
+            A list containing two tensors:
+            - true_samples: Samples drawn from the prior distribution p(z)
+            - z: Latent vectors sampled from the approximate posteriorq(z|x)
 
         Returns
         -------
-        list
-            [encoder, decoder, architecture, hyperparameters, train_history]
+        tf.Tensor
+            A symbolic tensor of shape (batch_size, 1) with a constant MMD
+            value repeated across the batch, so it integrates seamlessly
+            into Keras loss API.
+
+        Notes
+        -----
+        This implementation uses a Gaussian kernel to compare distributions.
+        The MMD value is broadcasted per sample so that Keras can average it
+        correctly when used with custom loss functions.
+        """
+        true_samples, z = inputs
+
+        def compute_kernel(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
+            """
+            Compute pairwise Gaussian kernel between two batches of vectors.
+
+            Parameters
+            ----------
+            x, y : tf.Tensor
+                Tensors of shape (batch_size, latent_dim)
+
+            Returns
+            -------
+            tf.Tensor
+                Kernel matrix of shape (batch_size, batch_size)
+            """
+            x_size = tf.shape(x)[0]
+            y_size = tf.shape(y)[0]
+            dim = tf.shape(x)[1]
+
+            tiled_x = tf.tile(tf.reshape(x, [x_size, 1, dim]), [1, y_size, 1])
+            tiled_y = tf.tile(tf.reshape(y, [1, y_size, dim]), [x_size, 1, 1])
+
+            return tf.exp(
+                -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
+                / tf.cast(dim, tf.float32)
+            )
+
+        x_kernel = compute_kernel(true_samples, true_samples)
+        y_kernel = compute_kernel(z, z)
+        xy_kernel = compute_kernel(true_samples, z)
+
+        mmd = (
+            tf.reduce_mean(x_kernel)
+            + tf.reduce_mean(y_kernel)
+            - 2 * tf.reduce_mean(xy_kernel)
+        )
+
+        # Return broadcasted value to match expected shape for loss
+        return tf.ones_like(z[:, :1]) * mmd
+
+    def _build_decoder(self):
+        """Build decoder"""
+
+        decoder_input = keras.Input(
+            shape=(self.architecture["latent_dimensions"],),
+            name="decoder_input",
+        )
+
+        block_output = self._add_block(decoder_input, block="decoder")
+
+        decoder_output = self._output_layer(block_output)
+
+        self.decoder = keras.Model(
+            decoder_input, decoder_output,
+            name="reconstruction"
+            # name="decoder"
+            )
+
+    def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
+
+        output_layer = layers.Dense(
+            units=self.architecture["input_dimensions"],
+            activation=self.hyperparameters["output_activation"],
+            name="decoder_output",
+        )
+
+        output_tensor = output_layer(input_tensor)
+
+        return output_tensor
+
+    def _add_block(self, input_tensor: tf.Tensor, block: str) -> tf.Tensor:
+        """
+        Build an graph of dense layers
+
+        PARAMETERS
+            input_tensor:
+            block:
+
+        OUTPUT
+            x:
+        """
+        x = input_tensor
+
+        if block == "encoder":
+
+            block_units = self.architecture["encoder"]
+
+        else:
+
+            block_units = self.architecture["decoder"]
+
+        for layer_index, number_units in enumerate(block_units):
+
+            # in the first iteration, x is the input tensor in the block
+            x = AutoEncoder._get_next_dense_layer_output(
+                x, layer_index, number_units, block
+            )
+
+        return x
+
+    @staticmethod
+    def _get_next_dense_layer_output(
+        input_tensor: tf.Tensor,  # the output of the previous layer
+        layer_index: int,
+        number_units: int,
+        block: str,
+    ) -> tf.Tensor:
+        """
+        Define and get output of next Dense layer
+
+        PARAMETERS
+            input_tensor:
+            layer_index:
+            number_units:
+            block:
+
+        OUTPUT
+            output_tensor:
         """
 
-        encoder = None
-        decoder = None
+        layer = layers.Dense(
+            units=number_units,
+            activation="relu",
+            name=f"{block}_{layer_index + 1:02d}",
+        )
 
-        for submodule in self.model.submodules:
-            if isinstance(submodule, keras.Model):
-                if submodule.name == "encoder":
-                    encoder = submodule
-                elif submodule.name == "decoder":
-                    decoder = submodule
+        output_tensor = layer(input_tensor)
 
-        with open(metadata_path, "rb") as file:
-            architecture, hyperparameters, train_history = pickle.load(file)
+        return output_tensor
 
-        return [encoder, decoder, architecture, hyperparameters, train_history]
+
+    def _build_ae(self):
+
+        self.original_output = self.decoder(self.encoder(self.original_input))
+
+        if self.architecture["is_variational"] is True:
+            self.model = keras.Model(
+                inputs=self.original_input,
+                outputs={
+                    "reconstruction": self.original_output,
+                    "kld": self.KLD,
+                    "mmd": self.MMD,
+                },
+                name=self.architecture["model_name"],
+            )
+        else:
+            self.model = keras.Model(
+                inputs=self.original_input,
+                outputs=self.original_output,
+                name=self.architecture["model_name"],
+            )
+
+    def _compile(self):
+
+        optimizer = keras.optimizers.Adam(
+            learning_rate=self.hyperparameters["learning_rate"]
+        )
+
+        reconstruction_weight = self.hyperparameters["reconstruction_weight"]
+
+        MSE = MyCustomLoss(
+            name="weighted_MSE",
+            keras_loss=keras.losses.MeanSquaredError(),
+            weight_factor=reconstruction_weight,
+        )
+        if self.architecture["is_variational"] is True:
+
+            # pylint: disable=W0613
+            def passthrough_loss(y_true, y_pred):
+                return tf.reduce_mean(y_pred)
+
+            self.model.compile(
+                optimizer=optimizer,
+                loss={
+                    "reconstruction": MSE,
+                    "kld": passthrough_loss,
+                    "mmd": passthrough_loss,
+                },
+                metrics={
+                    "reconstruction": ["mse"]
+                    # "kld": ["mean"],
+                    # "mmd": ["mean"],
+                    },
+                )
+        else:
+            self.model.compile(
+                optimizer=optimizer, loss=MSE, metrics=["mse"]
+                )
 
     def train(self, spectra: np.array) -> keras.callbacks.History:
         """Train model with spectra array"""
@@ -485,12 +823,6 @@ class AutoEncoder(FileDirectory):
 
         return spectra
 
-    def summary(self):
-        """Return Keras buitl int summary of Model class"""
-        self.encoder.summary()
-        self.decoder.summary()
-        self.model.summary()
-
     def save_model(self, save_to: str) -> None:
         """
         Save the model and training metadata to the specified directory.
@@ -527,280 +859,60 @@ class AutoEncoder(FileDirectory):
             ) as file:
             pickle.dump(parameters, file)
 
-    def _build_model(self) -> None:
+    def _set_class_instances_from_saved_model(
+        self, metadata_path: str
+    ) -> list:
         """
-        Builds the the auto encoder model
-        """
-        self._build_encoder()
-        self._build_decoder()
-        self._build_ae()
-        self._compile()
+        Load encoder, decoder, and training metadata from saved model.
 
-    def _compile(self):
+        Parameters
+        ----------
+        metadata_path : str
+            Full path to the .pkl file containing training metadata.
 
-        optimizer = keras.optimizers.Adam(
-            learning_rate=self.hyperparameters["learning_rate"]
-        )
-
-        reconstruction_weight = self.hyperparameters["reconstruction_weight"]
-
-        MSE = MyCustomLoss(
-            name="weighted_MSE",
-            keras_loss=keras.losses.MeanSquaredError(),
-            weight_factor=reconstruction_weight,
-        )
-        if self.architecture["is_variational"] is True:
-
-            # pylint: disable=W0613
-            def passthrough_loss(y_true, y_pred):
-                return tf.reduce_mean(y_pred)
-
-            self.model.compile(
-                optimizer=optimizer,
-                loss={
-                    "reconstruction": MSE,
-                    "kld": passthrough_loss,
-                    "mmd": passthrough_loss,
-                },
-                metrics={
-                    "reconstruction": ["mse"]
-                    # "kld": ["mean"],
-                    # "mmd": ["mean"],
-                    },
-                )
-        else:
-            self.model.compile(
-                optimizer=optimizer, loss=MSE, metrics=["mse"]
-                )
-
-    def _build_ae(self):
-
-        self.original_output = self.decoder(self.encoder(self.original_input))
-
-        if self.architecture["is_variational"] is True:
-            self.model = keras.Model(
-                inputs=self.original_input,
-                outputs={
-                    "reconstruction": self.original_output,
-                    "kld": self.KLD,
-                    "mmd": self.MMD,
-                },
-                name=self.architecture["model_name"],
-            )
-        else:
-            self.model = keras.Model(
-                inputs=self.original_input,
-                outputs=self.original_output,
-                name=self.architecture["model_name"],
-            )
-
-    def _build_decoder(self):
-        """Build decoder"""
-
-        decoder_input = keras.Input(
-            shape=(self.architecture["latent_dimensions"],),
-            name="decoder_input",
-        )
-
-        block_output = self._add_block(decoder_input, block="decoder")
-
-        decoder_output = self._output_layer(block_output)
-
-        self.decoder = keras.Model(
-            decoder_input, decoder_output,
-            name="reconstruction"
-            # name="decoder"
-            )
-
-    def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
-
-        output_layer = layers.Dense(
-            units=self.architecture["input_dimensions"],
-            activation=self.hyperparameters["output_activation"],
-            name="decoder_output",
-        )
-
-        output_tensor = output_layer(input_tensor)
-
-        return output_tensor
-
-    def _build_encoder(self):
-        """Build encoder"""
-
-        encoder_input = keras.Input(
-            shape=(self.architecture["input_dimensions"],),
-            name="encoder_input",
-        )
-        self.original_input = encoder_input
-
-        block_output = self._add_block(encoder_input, block="encoder")
-
-        if self.architecture["is_variational"]:
-            z, z_mean, z_log_var = self._sampling_layer(block_output)
-
-            def compute_kld(inputs):
-                z_mean, z_log_var = inputs
-                return -0.5 * tf.reduce_mean(
-                    z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
-                    axis=1,
-                )
-
-            raw_kld = keras.layers.Lambda(
-                compute_kld, name="kld_loss"
-                )([z_mean, z_log_var])
-
-            latent_dim = self.architecture["latent_dimensions"]
-
-            def create_true_samples(z):
-                batch_size = tf.shape(z)[0]
-                return tf.random.normal([batch_size, latent_dim])
-
-            true_samples_layer = keras.layers.Lambda(
-                create_true_samples, name="true_samples"
-            )(z)
-
-            raw_mmd = keras.layers.Lambda(
-                AutoEncoder.compute_mmd_layer, name="mmd_loss"
-            )([true_samples_layer, z])
-
-            alpha = self.hyperparameters["alpha"]
-            lambda_ = self.hyperparameters["lambda"]
-
-            self.KLD = keras.layers.Lambda(
-                lambda x: x * (1 - alpha), name="kld"
-                )(raw_kld)
-
-            self.MMD = keras.layers.Lambda(
-                lambda x: x * (alpha + lambda_ - 1),
-                name="mmd"
-                )(raw_mmd)
-
-        else:
-            z_layer = layers.Dense(
-                units=self.architecture["latent_dimensions"],
-                activation="relu",
-                name="z_deterministic",
-            )
-            z = z_layer(block_output)
-
-        self.encoder = keras.Model(encoder_input, z, name="encoder")
-
-    @staticmethod
-    def compute_mmd_layer(inputs):
-        """MMD layer for variational autoencoders."""
-        true_samples, z = inputs
-
-        def compute_kernel(x, y):
-            x_size = tf.shape(x)[0]
-            y_size = tf.shape(y)[0]
-            dim = tf.shape(x)[1]
-
-            tiled_x = tf.tile(tf.reshape(x, [x_size, 1, dim]), [1, y_size, 1])
-            tiled_y = tf.tile(tf.reshape(y, [1, y_size, dim]), [x_size, 1, 1])
-
-            return tf.exp(
-                -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
-                / tf.cast(dim, tf.float32)
-            )
-
-        x_kernel = compute_kernel(true_samples, true_samples)
-        y_kernel = compute_kernel(z, z)
-        xy_kernel = compute_kernel(true_samples, z)
-
-        return tf.ones_like(z[:, :1])*(
-            tf.reduce_mean(x_kernel)
-            + tf.reduce_mean(y_kernel)
-            - 2 * tf.reduce_mean(xy_kernel)
-        )
-
-    def _add_block(self, input_tensor: tf.Tensor, block: str) -> tf.Tensor:
-        """
-        Build an graph of dense layers
-
-        PARAMETERS
-            input_tensor:
-            block:
-
-        OUTPUT
-            x:
-        """
-        x = input_tensor
-
-        if block == "encoder":
-
-            block_units = self.architecture["encoder"]
-
-        else:
-
-            block_units = self.architecture["decoder"]
-
-        for layer_index, number_units in enumerate(block_units):
-
-            # in the first iteration, x is the input tensor in the block
-            x = AutoEncoder._get_next_dense_layer_output(
-                x, layer_index, number_units, block
-            )
-
-        return x
-
-    @staticmethod
-    def _get_next_dense_layer_output(
-        input_tensor: tf.Tensor,  # the output of the previous layer
-        layer_index: int,
-        number_units: int,
-        block: str,
-    ) -> tf.Tensor:
-        """
-        Define and get output of next Dense layer
-
-        PARAMETERS
-            input_tensor:
-            layer_index:
-            number_units:
-            block:
-
-        OUTPUT
-            output_tensor:
+        Returns
+        -------
+        list
+            [encoder, decoder, architecture, hyperparameters, train_history]
         """
 
-        layer = layers.Dense(
-            units=number_units,
-            activation="relu",
-            name=f"{block}_{layer_index + 1:02d}",
-        )
+        encoder = None
+        decoder = None
 
-        output_tensor = layer(input_tensor)
+        for submodule in self.model.submodules:
+            if isinstance(submodule, keras.Model):
+                if submodule.name == "encoder":
+                    encoder = submodule
+                elif submodule.name == "decoder":
+                    decoder = submodule
 
-        return output_tensor
+        with open(metadata_path, "rb") as file:
+            architecture, hyperparameters, train_history = pickle.load(file)
 
-    def _sampling_layer(
-        self, encoder_output: tf.Tensor
-    ) -> list[tf.Tensor, tf.Tensor, tf.Tensor]:
+        return [encoder, decoder, architecture, hyperparameters, train_history]
+
+    def summary(self):
+        """Return Keras buitl int summary of Model class"""
+        self.encoder.summary()
+        self.decoder.summary()
+        self.model.summary()
+
+    def get_architecture_and_model_str(self) -> list:
         """
-        Sample output of the encoder and add the kl loss
-
-        PARAMETERS
-            encoder_output:
-
-        OUTPUT
-            z, z_mean, z_log_var
+        Retrieve model architecture and name, e.g:
+        [512_256_10_256_512, infoVae_rec_3458_alpha_1_lambda_10
         """
 
-        mu_layer = layers.Dense(
-            units=self.architecture["latent_dimensions"], name="z_mean"
+        architecture_str = self.architecture["encoder"]
+        architecture_str += [self.architecture["latent_dimensions"]]
+        architecture_str += self.architecture["decoder"]
+        architecture_str = "_".join(str(unit) for unit in architecture_str)
+
+        model_name = (
+            f"{self.architecture['model_name']}"
+            f"_rec_{self.hyperparameters['reconstruction_weight']:1.0f}"
+            f"_alpha_{self.hyperparameters['alpha']:1.0f}"
+            f"_lambda_{self.hyperparameters['lambda']:1.0f}"
         )
 
-        z_mean = mu_layer(encoder_output)
-
-        log_var_layer = layers.Dense(
-            units=self.architecture["latent_dimensions"], name="z_log_variance"
-        )
-
-        z_log_var = log_var_layer(encoder_output)
-
-        sampling_inputs = (z_mean, z_log_var)
-        sample_layer = SamplingLayer(name="z_variational")
-
-        z = sample_layer(sampling_inputs)
-
-        return z, z_mean, z_log_var
+        return [architecture_str, model_name]
