@@ -1,9 +1,9 @@
 """Define class to set and reload autoencoders and variational AEs"""
 
 import pickle
+from typing import Any, Tuple
 
 import numpy as np
-
 import keras
 from keras import layers
 import tensorflow as tf
@@ -13,14 +13,52 @@ from sdss.utils.managefiles import FileDirectory
 # pylint: disable=W0223
 class SamplingLayer(keras.layers.Layer):
     """
-    Sampling layer for variational autoencoders.
-    Uses (z_mean, z_log_variance) to sample z from the latent distribution.
+    Sampling layer for variational autoencoders (VAEs).
+
+    This custom Keras layer performs the reparameterization trick:
+    given the mean and log-variance of a latent Gaussian distribution,
+    it returns a sampled latent vector `z`.
+
+    Parameters
+    ----------
+    name : str, optional
+        Name of the layer. Default is "sampleLayer".
     """
 
-    def __init__(self, name: str = "sampleLayer"):
+    def __init__(self, name: str = "sampleLayer") -> None:
+        """
+        Initialize the SamplingLayer.
+
+        Parameters
+        ----------
+        name : str
+            The name of the layer.
+        """
         super().__init__(name=name)
+
     # pylint: disable=W0221
-    def call(self, inputs, *args, **kwargs):
+    def call(
+        self,
+        inputs: Tuple[tf.Tensor, tf.Tensor],
+        *args: Any,
+        **kwargs: Any
+    ) -> tf.Tensor:
+        """
+        Perform the reparameterization trick.
+
+        Parameters
+        ----------
+        inputs : tuple of tf.Tensor
+            A tuple (z_mean, z_log_var) where:
+              - z_mean is the mean of the latent Gaussian distribution
+              - z_log_var is the log-variance of the same distribution
+
+        Returns
+        -------
+        tf.Tensor
+            A tensor `z` sampled from the distribution
+            N(z_mean, exp(z_log_var)).
+        """
         z_mean, z_log_var = inputs
 
         batch = tf.shape(z_mean)[0]
@@ -29,11 +67,32 @@ class SamplingLayer(keras.layers.Layer):
 
         return z_mean + tf.exp(0.5 * z_log_var) * epsilon
 
-    def get_config(self):
+    def get_config(self) -> dict[str, str]:
+        """
+        Return the config dictionary for serialization.
+
+        Returns
+        -------
+        dict
+            A dictionary containing the layer configuration.
+        """
         return {"name": self.name}
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: dict[str, str]) -> "SamplingLayer":
+        """
+        Create a layer instance from a config dictionary.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration dictionary from `get_config`.
+
+        Returns
+        -------
+        SamplingLayer
+            A new instance of SamplingLayer.
+        """
         return cls(**config)
 
 class MyCustomLoss(keras.losses.Loss):
@@ -226,7 +285,7 @@ class AutoEncoder(FileDirectory):
         print("Shapes:")
         for name, out in zip(self.model.output_names, self.model.outputs):
             print(f"{name}: shape={out.shape}")
-        
+
         history = self.model.fit(
             x=spectra,
             y={
@@ -374,6 +433,7 @@ class AutoEncoder(FileDirectory):
         )
         if self.architecture["is_variational"] is True:
 
+            # pylint: disable=W0613
             def passthrough_loss(y_true, y_pred):
                 return tf.reduce_mean(y_pred)
 

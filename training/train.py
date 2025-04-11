@@ -7,11 +7,10 @@ import time
 import numpy as np
 import tensorflow as tf
 
-from autoencoders.ae import AutoEncoder
 from sdss.utils.configfile import ConfigurationFile
+from autoencoders.ae import AutoEncoder
 
 
-#########################################################################
 def main():
     """Run AE training"""
     # Set environment variables to disable multithreading
