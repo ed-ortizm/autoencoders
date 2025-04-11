@@ -512,9 +512,23 @@ class AutoEncoder(FileDirectory):
         # Return broadcasted value to match expected shape for loss
         return tf.ones_like(z[:, :1]) * mmd
 
-    def _build_decoder(self):
-        """Build decoder"""
+    def _build_decoder(self) -> None:
+        """
+        Construct the decoder component of the autoencoder using the Keras
+        functional API.
 
+        The decoder maps latent vectors back into the input space by applying
+        a sequence of Dense layers followed by an output layer. The architecture
+        of the decoder (e.g., number of layers and units) is defined in the
+        `self.architecture["decoder"]` list.
+
+        This method assigns the resulting Keras model to `self.decoder`.
+
+        Notes
+        -----
+        The decoder input shape is determined by the latent dimensionality, and
+        the model output matches the dimensionality of the original spectra.
+        """
         decoder_input = keras.Input(
             shape=(self.architecture["latent_dimensions"],),
             name="decoder_input",
@@ -525,10 +539,11 @@ class AutoEncoder(FileDirectory):
         decoder_output = self._output_layer(block_output)
 
         self.decoder = keras.Model(
-            decoder_input, decoder_output,
-            name="reconstruction"
-            # name="decoder"
-            )
+            inputs=decoder_input,
+            outputs=decoder_output,
+            name="reconstruction"  # Used for loss targeting during training
+            # name="decoder"  # Alternative name if not targeting reconstruction
+        )
 
     def _output_layer(self, input_tensor: tf.Tensor) -> tf.Tensor:
 
