@@ -387,82 +387,82 @@ class AutoEncoder(FileDirectory):
         # self.encoder = keras.Model(encoder_input, z, name="encoder")
 
     def _build_encoder(self) -> None:
-    #     """
-    #     Construct the encoder submodel of the AutoEncoder.
+        """
+        Construct the encoder submodel of the AutoEncoder.
 
-    #     If the model is variational, computes additional symbolic layers
-    #     for KL divergence (KLD) and Maximum Mean Discrepancy (MMD),
-    #     which are later integrated into the full model as losses.
+        If the model is variational, computes additional symbolic layers
+        for KL divergence (KLD) and Maximum Mean Discrepancy (MMD),
+        which are later integrated into the full model as losses.
 
-    #     Sets
-    #     ----
-    #     self.encoder : keras.Model
-    #         Compiled encoder model.
-    #     self.original_input : tf.Tensor
-    #         Input placeholder used to build the full autoencoder.
-    #     self.KLD : tf.Tensor
-    #         Symbolic tensor for KL divergence loss (if variational).
-    #     self.MMD : tf.Tensor
-    #         Symbolic tensor for MMD loss (if variational).
-    #     """
-    #     encoder_input = keras.Input(
-    #         shape=(self.architecture["input_dimensions"],),
-    #         name="encoder_input",
-    #     )
-    #     self.original_input = encoder_input
+        Sets
+        ----
+        self.encoder : keras.Model
+            Compiled encoder model.
+        self.original_input : tf.Tensor
+            Input placeholder used to build the full autoencoder.
+        self.KLD : tf.Tensor
+            Symbolic tensor for KL divergence loss (if variational).
+        self.MMD : tf.Tensor
+            Symbolic tensor for MMD loss (if variational).
+        """
+        encoder_input = keras.Input(
+            shape=(self.architecture["input_dimensions"],),
+            name="encoder_input",
+        )
+        self.original_input = encoder_input
 
-    #     block_output = self._add_block(encoder_input, block="encoder")
+        block_output = self._add_block(encoder_input, block="encoder")
 
-    #     if self.architecture["is_variational"]:
-    #         z, z_mean, z_log_var = self._sampling_layer(block_output)
+        if self.architecture["is_variational"]:
+            z, z_mean, z_log_var = self._sampling_layer(block_output)
 
-    #         # Compute KL divergence
-    #         def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
-    #             z_mean, z_log_var = inputs
-    #             return -0.5 * tf.reduce_mean(
-    #                 z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
-    #                 axis=1,  # Reduce over feature dimensions only
-    #             )
+            # Compute KL divergence
+            def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
+                z_mean, z_log_var = inputs
+                return -0.5 * tf.reduce_mean(
+                    z_log_var - tf.square(z_mean) - tf.exp(z_log_var) + 1,
+                    axis=1,  # Reduce over feature dimensions only
+                )
 
-    #         raw_kld = keras.layers.Lambda(
-    #             compute_kld, name="kld_loss"
-    #         )([z_mean, z_log_var])
+            raw_kld = keras.layers.Lambda(
+                compute_kld, name="kld_loss"
+            )([z_mean, z_log_var])
 
-    #         latent_dim = self.architecture["latent_dimensions"]
+            latent_dim = self.architecture["latent_dimensions"]
 
-    #         # Sample from the prior for MMD
-    #         def create_true_samples(z: tf.Tensor) -> tf.Tensor:
-    #             batch_size = tf.shape(z)[0]
-    #             return tf.random.normal([batch_size, latent_dim])
+            # Sample from the prior for MMD
+            def create_true_samples(z: tf.Tensor) -> tf.Tensor:
+                batch_size = tf.shape(z)[0]
+                return tf.random.normal([batch_size, latent_dim])
 
-    #         true_samples_layer = keras.layers.Lambda(
-    #             create_true_samples, name="true_samples"
-    #         )(z)
+            true_samples_layer = keras.layers.Lambda(
+                create_true_samples, name="true_samples"
+            )(z)
 
-    #         raw_mmd = keras.layers.Lambda(
-    #             AutoEncoder.compute_mmd, name="mmd_loss"
-    #         )([true_samples_layer, z])
+            raw_mmd = keras.layers.Lambda(
+                AutoEncoder.compute_mmd, name="mmd_loss"
+            )([true_samples_layer, z])
 
-    #         alpha = self.hyperparameters["alpha"]
-    #         lambda_ = self.hyperparameters["lambda"]
+            alpha = self.hyperparameters["alpha"]
+            lambda_ = self.hyperparameters["lambda"]
 
-    #         self.KLD = keras.layers.Lambda(
-    #             lambda x: x * (1 - alpha), name="kld"
-    #         )(raw_kld)
+            self.KLD = keras.layers.Lambda(
+                lambda x: x * (1 - alpha), name="kld"
+            )(raw_kld)
 
-    #         self.MMD = keras.layers.Lambda(
-    #             lambda x: x * (alpha + lambda_ - 1), name="mmd"
-    #         )(raw_mmd)
+            self.MMD = keras.layers.Lambda(
+                lambda x: x * (alpha + lambda_ - 1), name="mmd"
+            )(raw_mmd)
 
-    #     else:
-    #         z_layer = layers.Dense(
-    #             units=self.architecture["latent_dimensions"],
-    #             activation="relu",
-    #             name="z_deterministic",
-    #         )
-    #         z = z_layer(block_output)
+        else:
+            z_layer = layers.Dense(
+                units=self.architecture["latent_dimensions"],
+                activation="relu",
+                name="z_deterministic",
+            )
+            z = z_layer(block_output)
 
-    #     self.encoder = keras.Model(encoder_input, z, name="encoder")
+        self.encoder = keras.Model(encoder_input, z, name="encoder")
 
     def _sampling_layer(
         self, encoder_output: tf.Tensor
