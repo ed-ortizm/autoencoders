@@ -97,8 +97,20 @@ class SamplingLayer(keras.layers.Layer):
 
 class MyCustomLoss(keras.losses.Loss):
     """
-    Create custom loss function for autoencoders using a built-in
-    Keras loss function (e.g., MeanSquaredError), with a scaling factor.
+    Custom loss wrapper for scaling a built-in Keras loss function.
+
+    This class allows any standard Keras loss function (e.g., MeanSquaredError)
+    to be scaled by a constant factor, making it useful when combining losses
+    (e.g., reconstruction loss + KL divergence + MMD in VAEs).
+
+    Parameters
+    ----------
+    name : str
+        Name of the loss function (for tracking/logging).
+    keras_loss : keras.losses.Loss
+        A built-in or user-defined Keras loss instance to be scaled.
+    weight_factor : float, optional
+        Multiplier for scaling the loss (default is 1.0).
     """
 
     def __init__(
@@ -106,24 +118,66 @@ class MyCustomLoss(keras.losses.Loss):
         name: str,
         keras_loss: keras.losses.Loss,
         weight_factor: float = 1.0,
-    ):
+    ) -> None:
         super().__init__(name=name)
         self.keras_loss = keras_loss
         self.weight_factor = weight_factor
 
-    def call(self, y_true, y_pred):
+    def call(
+        self,
+        y_true: tf.Tensor,
+        y_pred: tf.Tensor
+    ) -> tf.Tensor:
+        """
+        Apply the scaled loss function.
+
+        Parameters
+        ----------
+        y_true : tf.Tensor
+            Ground truth values.
+        y_pred : tf.Tensor
+            Predicted values.
+
+        Returns
+        -------
+        tf.Tensor
+            Scaled loss value.
+        """
         return self.weight_factor * self.keras_loss(y_true, y_pred)
 
-    def get_config(self):
+    def get_config(self) -> dict[str, Any]:
+        """
+        Return a dictionary for serializing this loss object.
+
+        Returns
+        -------
+        dict
+            Configuration dictionary containing:
+            - name of the loss
+            - string name of the keras_loss class
+            - weight_factor used
+        """
         return {
             "name": self.name,
-            # save class name
             "keras_loss": self.keras_loss.__class__.__name__,
             "weight_factor": self.weight_factor,
         }
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: dict[str, Any]) -> "MyCustomLoss":
+        """
+        Reconstruct the custom loss object from its config.
+
+        Parameters
+        ----------
+        config : dict
+            Configuration dictionary returned from `get_config`.
+
+        Returns
+        -------
+        MyCustomLoss
+            A new instance of the custom loss.
+        """
         loss_name = config.pop("keras_loss")
         loss_class = getattr(keras.losses, loss_name)
         loss_instance = loss_class()
