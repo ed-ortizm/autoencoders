@@ -1,13 +1,12 @@
-"""Define class to set and reload autoencoders and variational AEs"""
-
+"""
+Define class to set and reload autoencoders and variational AEs
+"""
 import pickle
 from typing import Any, Tuple, Optional
-
 import numpy as np
 import keras
 from keras import layers
 import tensorflow as tf
-
 from sdss.utils.managefiles import FileDirectory
 
 # pylint: disable=W0223
@@ -245,13 +244,25 @@ def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
         axis=1,
     )
 
+# @keras.saving.register_keras_serializable()
+# def scale_kld(x, alpha):
+#     return x * (1 - alpha)
+
+# @keras.saving.register_keras_serializable()
+# def scale_mmd(x, alpha, lambda_):
+#     return x * (alpha + lambda_ - 1)
 @keras.saving.register_keras_serializable()
-def scale_kld(x, alpha):
-    return x * (1 - alpha)
+def scale_kld_factory(alpha):
+    def scale_kld(x):
+        return x * (1 - alpha)
+    return scale_kld
+
 
 @keras.saving.register_keras_serializable()
-def scale_mmd(x, alpha, lambda_):
-    return x * (alpha + lambda_ - 1)
+def scale_mmd_factory(alpha, lambda_):
+    def scale_mmd(x):
+        return x * (alpha + lambda_ - 1)
+    return scale_mmd
 
 @keras.saving.register_keras_serializable()
 def passthrough_loss(y_true, y_pred):
@@ -421,14 +432,21 @@ class AutoEncoder(FileDirectory):
             alpha = self.hyperparameters["alpha"]
             lambda_ = self.hyperparameters["lambda"]
 
+            # self.KLD = keras.layers.Lambda(
+            #     lambda x: scale_kld(x, alpha), name="kld",
+            #     output_shape=(None,)
+            # )(raw_kld)
+
+            # self.MMD = keras.layers.Lambda(
+            #     lambda x: scale_mmd(x, alpha, lambda_), name="mmd",
+            #     output_shape=(None,),  # broadcasted to match batch size
+            # )(raw_mmd)
             self.KLD = keras.layers.Lambda(
-                lambda x: scale_kld(x, alpha), name="kld",
-                output_shape=(None,)
+                scale_kld_factory(alpha), name="kld", output_shape=(None,)
             )(raw_kld)
 
             self.MMD = keras.layers.Lambda(
-                lambda x: scale_mmd(x, alpha, lambda_), name="mmd",
-                output_shape=(None,),  # broadcasted to match batch size
+                scale_mmd_factory(alpha, lambda_), name="mmd", output_shape=(None,)
             )(raw_mmd)
 
         else:
