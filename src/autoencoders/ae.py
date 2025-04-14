@@ -230,7 +230,10 @@ def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
 
 @keras.saving.register_keras_serializable()
 def create_true_samples(z: tf.Tensor) -> tf.Tensor:
-    """Generate samples from the prior (standard normal) for MMD computation."""
+    """
+    Generate samples from the prior (standard normal) 
+    for MMD computation.
+    """
     batch_size = tf.shape(z)[0]
     latent_dim = tf.shape(z)[1]
     return tf.random.normal([batch_size, latent_dim])
@@ -244,28 +247,34 @@ def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
         axis=1,
     )
 
-# @keras.saving.register_keras_serializable()
-# def scale_kld(x, alpha):
-#     return x * (1 - alpha)
+# Dummy replacements
+@keras.saving.register_keras_serializable()
+def dummy_kld(x):
+    """Dummy KL divergence function for serialization."""
+    return tf.zeros_like(x)
 
-# @keras.saving.register_keras_serializable()
-# def scale_mmd(x, alpha, lambda_):
-#     return x * (alpha + lambda_ - 1)
+@keras.saving.register_keras_serializable()
+def dummy_mmd(x):
+    """Dummy MMD function for serialization."""
+    return tf.zeros_like(x)
+
 @keras.saving.register_keras_serializable()
 def scale_kld_factory(alpha):
+    """ Registering a factory function for scaling KLD """
     def scale_kld(x):
         return x * (1 - alpha)
     return scale_kld
 
-
 @keras.saving.register_keras_serializable()
 def scale_mmd_factory(alpha, lambda_):
+    """ Registering a factory function for scaling MMD """
     def scale_mmd(x):
         return x * (alpha + lambda_ - 1)
     return scale_mmd
-
+# pylint: disable=W0613
 @keras.saving.register_keras_serializable()
 def passthrough_loss(y_true, y_pred):
+    """ pass through loss function """
     return tf.reduce_mean(y_pred)
 
 class AutoEncoder(FileDirectory):
@@ -334,10 +343,14 @@ class AutoEncoder(FileDirectory):
             self.model = keras.models.load_model(
                 keras_model_path,
                 custom_objects={
-                    "MyCustomLoss": MyCustomLoss,
                     "SamplingLayer": SamplingLayer,
+                    "MyCustomLoss": MyCustomLoss,
+                    "scale_kld": dummy_kld,
+                    "scale_mmd": dummy_mmd,
+                    "scale_kld_factory": dummy_kld,
+                    "scale_mmd_factory": dummy_mmd
                 },
-                compile=False,  # Recompilation will happen later
+                compile=False,
                 safe_mode=False
             )
 
@@ -446,7 +459,8 @@ class AutoEncoder(FileDirectory):
             )(raw_kld)
 
             self.MMD = keras.layers.Lambda(
-                scale_mmd_factory(alpha, lambda_), name="mmd", output_shape=(None,)
+                scale_mmd_factory(alpha, lambda_),
+                name="mmd", output_shape=(None,)
             )(raw_mmd)
 
         else:
@@ -497,76 +511,6 @@ class AutoEncoder(FileDirectory):
         z = sample_layer(sampling_inputs)
 
         return z, z_mean, z_log_var
-
-    # @staticmethod
-    # def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
-    #     """
-    #     Compute the symbolic Maximum Mean Discrepancy (MMD) loss between the
-    #     approximate posterior q(z) and a prior p(z) using the kernel method.
-
-    #     This method is intended to be used inside a Lambda layer, allowing it
-    #     to participate in the computational graph as a symbolic loss term.
-
-    #     Parameters
-    #     ----------
-    #     inputs : list of tf.Tensor
-    #         A list containing two tensors:
-    #         - true_samples: Samples drawn from the prior distribution p(z)
-    #         - z: Latent vectors sampled from the approximate posteriorq(z|x)
-
-    #     Returns
-    #     -------
-    #     tf.Tensor
-    #         A symbolic tensor of shape (batch_size, 1) with a constant MMD
-    #         value repeated across the batch, so it integrates seamlessly
-    #         into Keras loss API.
-
-    #     Notes
-    #     -----
-    #     This implementation uses a Gaussian kernel to compare distributions.
-    #     The MMD value is broadcasted per sample so that Keras can average it
-    #     correctly when used with custom loss functions.
-    #     """
-    #     true_samples, z = inputs
-
-    #     def compute_kernel(x: tf.Tensor, y: tf.Tensor) -> tf.Tensor:
-    #         """
-    #         Compute pairwise Gaussian kernel between two batches of vectors.
-
-    #         Parameters
-    #         ----------
-    #         x, y : tf.Tensor
-    #             Tensors of shape (batch_size, latent_dim)
-
-    #         Returns
-    #         -------
-    #         tf.Tensor
-    #             Kernel matrix of shape (batch_size, batch_size)
-    #         """
-    #         x_size = tf.shape(x)[0]
-    #         y_size = tf.shape(y)[0]
-    #         dim = tf.shape(x)[1]
-
-    #         tiled_x = tf.tile(tf.reshape(x, [x_size, 1, dim]), [1, y_size, 1])
-    #         tiled_y = tf.tile(tf.reshape(y, [1, y_size, dim]), [x_size, 1, 1])
-
-    #         return tf.exp(
-    #             -tf.reduce_mean(tf.square(tiled_x - tiled_y), axis=2)
-    #             / tf.cast(dim, tf.float32)
-    #         )
-
-    #     x_kernel = compute_kernel(true_samples, true_samples)
-    #     y_kernel = compute_kernel(z, z)
-    #     xy_kernel = compute_kernel(true_samples, z)
-
-    #     mmd = (
-    #         tf.reduce_mean(x_kernel)
-    #         + tf.reduce_mean(y_kernel)
-    #         - 2 * tf.reduce_mean(xy_kernel)
-    #     )
-
-    #     # Return broadcasted value to match expected shape for loss
-    #     return tf.ones_like(z[:, :1]) * mmd
 
     def _build_decoder(self) -> None:
         """
@@ -887,8 +831,14 @@ class AutoEncoder(FileDirectory):
         """
         if spectra.ndim == 1:
             spectra = spectra.reshape(1, -1)
+        if isinstance(self.model.output, dict):
 
-        predicted_spectra = self.model.predict(spectra, verbose=0)
+            predicted_spectra = self.model.predict(
+                spectra, verbose=0
+            )["reconstruction"]
+        else:
+            predicted_spectra = self.model.predict(spectra, verbose=0)
+
         return predicted_spectra
 
     def encode(self, spectra: np.ndarray) -> np.ndarray:
@@ -978,7 +928,9 @@ class AutoEncoder(FileDirectory):
         ) as file:
             pickle.dump(parameters, file)
 
-    def _set_class_instances_from_saved_model(self, metadata_path: str) -> list:
+    def _set_class_instances_from_saved_model(
+        self, metadata_path: str
+        ) -> list:
         """
         Load encoder, decoder, and training metadata from saved model.
 
@@ -999,7 +951,7 @@ class AutoEncoder(FileDirectory):
             if isinstance(layer, keras.Model):
                 if layer.name == "encoder":
                     encoder = layer
-                elif layer.name == "reconstruction":  # or "decoder" if you change the name
+                elif layer.name == "reconstruction":
                     decoder = layer
 
         with open(metadata_path, "rb") as file:
