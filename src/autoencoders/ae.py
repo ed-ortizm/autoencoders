@@ -434,9 +434,6 @@ class AutoEncoder(FileDirectory):
                 output_shape=(self.architecture["latent_dimensions"],),
             )(z)
 
-            # raw_mmd = keras.layers.Lambda(
-            #     AutoEncoder.compute_mmd, name="mmd_loss"
-            # )([true_samples_layer, z])
             raw_mmd = keras.layers.Lambda(
                 compute_mmd, name="mmd_loss",
                 output_shape=(None,),  # broadcasted to match batch size
@@ -445,15 +442,6 @@ class AutoEncoder(FileDirectory):
             alpha = self.hyperparameters["alpha"]
             lambda_ = self.hyperparameters["lambda"]
 
-            # self.KLD = keras.layers.Lambda(
-            #     lambda x: scale_kld(x, alpha), name="kld",
-            #     output_shape=(None,)
-            # )(raw_kld)
-
-            # self.MMD = keras.layers.Lambda(
-            #     lambda x: scale_mmd(x, alpha, lambda_), name="mmd",
-            #     output_shape=(None,),  # broadcasted to match batch size
-            # )(raw_mmd)
             self.KLD = keras.layers.Lambda(
                 scale_kld_factory(alpha), name="kld", output_shape=(None,)
             )(raw_kld)
