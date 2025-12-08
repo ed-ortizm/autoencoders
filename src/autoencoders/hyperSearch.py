@@ -72,16 +72,18 @@ def build_and_train_model(
     ###########################################################################
     import tensorflow as tf
     from autoencoders.ae import AutoEncoder
-
+    # set the number of cores to use during training
+    tf.config.threading.set_intra_op_parallelism_threads(cores_per_worker)
+    tf.config.threading.set_inter_op_parallelism_threads(cores_per_worker)
     # set the number of cores to use per model in each worker
-    jobs = cores_per_worker
-    config = tf.compat.v1.ConfigProto(
-        intra_op_parallelism_threads=jobs,
-        inter_op_parallelism_threads=jobs,
-        allow_soft_placement=True,
-        device_count={"CPU": jobs},
-    )
-    session = tf.compat.v1.Session(config=config)
+    # jobs = cores_per_worker
+    # config = tf.compat.v1.ConfigProto(
+    #     intra_op_parallelism_threads=jobs,
+    #     inter_op_parallelism_threads=jobs,
+    #     allow_soft_placement=True,
+    #     device_count={"CPU": jobs},
+    # )
+    # session = tf.compat.v1.Session(config=config)
     ###########################################################################
     hyperparameters["reconstruction_weight"] = rec_weight
     hyperparameters["alpha"] = alpha
@@ -99,7 +101,7 @@ def build_and_train_model(
     vae.train(data)
     vae.save_model(f"{model_location}")
 
-    session.close()
+    # session.close()
 
 
 ###############################################################################

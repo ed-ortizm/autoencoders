@@ -77,7 +77,7 @@ if __name__ == "__main__":
 
         lambdas = np.exp(
             np.random.uniform(
-                low=0.1, high=np.log(1e3), size=(grid["number_lambdas"])
+                low=0.1, high=np.log(20), size=(grid["number_lambdas"])
             )
         )
 
@@ -92,18 +92,17 @@ if __name__ == "__main__":
         lambdas[0] = 2
 
         grid["lambda"] = lambdas.tolist()
-
     grid = hyperSearch.get_parameters_grid(grid)
-    #####################################################################
+    # #####################################################################
     counter = mp.Value("i", 0)
 
     share_data = RawArray(np.ctypeslib.as_ctypes_type(array_dtype), array_size)
 
-    #####################################################################
+    # #####################################################################
     model_directory = parser.get("directory", "models")
     latent_dimensions = parser.getint("architecture", "latent_dimensions")
     model_directory = f"{model_directory}/latent_{latent_dimensions:02d}"
-    #####################################################################
+    # #####################################################################
     number_processes = parser.getint("configuration", "number_processes")
     cores_per_worker = parser.getint("configuration", "cores_per_worker")
     with mp.Pool(
