@@ -63,45 +63,95 @@ def build_and_train_model(
 ) -> None:
     """
     Define the AutoEncoder instance based on hyperparameters from the grid
-    PARAMETERS
-        rec_weight:
-        alpha:
-        lambda_:
-
     """
-    ###########################################################################
+    import os
+    # 1. Force CPU usage (optional but recommended for strictly CPU parallelization)
+    os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
     import tensorflow as tf
-    from autoencoders.ae import AutoEncoder
-    # set the number of cores to use during training
+    
+    # 2. Configure threads BEFORE creating any Ops
+    # In TF 2.x, these must be set on the global context, not a Session
     tf.config.threading.set_intra_op_parallelism_threads(cores_per_worker)
     tf.config.threading.set_inter_op_parallelism_threads(cores_per_worker)
-    # set the number of cores to use per model in each worker
-    # jobs = cores_per_worker
-    # config = tf.compat.v1.ConfigProto(
-    #     intra_op_parallelism_threads=jobs,
-    #     inter_op_parallelism_threads=jobs,
-    #     allow_soft_placement=True,
-    #     device_count={"CPU": jobs},
-    # )
-    # session = tf.compat.v1.Session(config=config)
-    ###########################################################################
+
+    from autoencoders.ae import AutoEncoder
+
+    # --- Update Hyperparameters ---
     hyperparameters["reconstruction_weight"] = rec_weight
     hyperparameters["alpha"] = alpha
     hyperparameters["lambda"] = lambda_
 
+    # --- Logging & Counter ---
     with counter.get_lock():
-
         print(f"Start training model {counter.value:04d}", end="\r")
-
         model_location = f"{model_directory}/{counter.value:04d}"
-
         counter.value += 1
 
-    vae = AutoEncoder(architecture, hyperparameters)
-    vae.train(data)
-    vae.save_model(f"{model_location}")
+    # --- Train Model ---
+    try:
+        vae = AutoEncoder(architecture, hyperparameters)
+        vae.train(data)
+        vae.save_model(f"{model_location}")
+    except Exception as e:
+        print(f"\nError training model {counter.value}: {e}")
+    finally:
+        # 3. Critical for TF2 Memory Management in loops/workers
+        # Clear the global state to free memory for the next potential job in this worker
+        tf.keras.backend.clear_session()
+        
+        # Force garbage collection
+        import gc
+        gc.collect()
+# def build_and_train_model(
+#     rec_weight: float, alpha: float, lambda_: float
+# ) -> None:
+#     """
+#     Define the AutoEncoder instance based on hyperparameters from the grid
+#     PARAMETERS
+#         rec_weight:
+#         alpha:
+#         lambda_:
 
-    # session.close()
+#     """
+#     ###########################################################################
+#     import os
+#     # 1. Force CPU usage (optional but recommended for strictly CPU parallelization)
+#     os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+#     # 2. Configure threads BEFORE creating any Ops
+#     import tensorflow as tf
+#     tf.config.threading.set_intra_op_parallelism_threads(cores_per_worker)
+#     tf.config.threading.set_inter_op_parallelism_threads(cores_per_worker)
+
+#     from autoencoders.ae import AutoEncoder
+#     # # set the number of cores to use during training
+#     # # set the number of cores to use per model in each worker
+#     # jobs = cores_per_worker
+#     # config = tf.compat.v1.ConfigProto(
+#     #     intra_op_parallelism_threads=jobs,
+#     #     inter_op_parallelism_threads=jobs,
+#     #     allow_soft_placement=True,
+#     #     device_count={"CPU": jobs},
+#     # )
+#     # session = tf.compat.v1.Session(config=config)
+#     ###########################################################################
+#     hyperparameters["reconstruction_weight"] = rec_weight
+#     hyperparameters["alpha"] = alpha
+#     hyperparameters["lambda"] = lambda_
+
+#     with counter.get_lock():
+
+#         print(f"Start training model {counter.value:04d}", end="\r")
+
+#         model_location = f"{model_directory}/{counter.value:04d}"
+
+#         counter.value += 1
+
+#     vae = AutoEncoder(architecture, hyperparameters)
+#     vae.train(data)
+#     vae.save_model(f"{model_location}")
+
+#     # session.close()
 
 
 ###############################################################################
