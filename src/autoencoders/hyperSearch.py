@@ -19,7 +19,7 @@ def init_shared_data(
     share_counter: mp.Value,
     share_data: RawArray,
     data_shape: tuple,
-    data_location: str,
+    # data_location: str,
     share_architecture: dict,
     share_hyperparameters: dict,
     share_model_directory: str,
@@ -48,15 +48,20 @@ def init_shared_data(
 
     counter = share_counter
     data = to_numpy_array(share_data, data_shape)
-    data[...] = np.load(data_location)
-    # shuffle data to break any bias in spectra order if present
-    np.random.shuffle(data)
+
+    # data[...] = np.load(data_location)
+    # # shuffle data to break any bias in spectra order if present
+    # np.random.shuffle(data)
+
     architecture = share_architecture
     hyperparameters = share_hyperparameters
     model_directory = share_model_directory
     cores_per_worker = share_cores_per_worker
 
-
+    # Force thread limits for libraries like Numpy/Scipy in this worker
+    import os
+    os.environ["OMP_NUM_THREADS"] = "1"
+    os.environ["MKL_NUM_THREADS"] = "1"
 ###############################################################################
 def build_and_train_model(
     rec_weight: float, alpha: float, lambda_: float
@@ -90,19 +95,24 @@ def build_and_train_model(
 
     # --- Train Model ---
     try:
+
         vae = AutoEncoder(architecture, hyperparameters)
         vae.train(data)
         vae.save_model(f"{model_location}")
+    
     except Exception as e:
+        
         print(f"\nError training model {counter.value}: {e}")
+    
     finally:
         # 3. Critical for TF2 Memory Management in loops/workers
         # Clear the global state to free memory for the next potential job in this worker
         tf.keras.backend.clear_session()
-        
+
         # Force garbage collection
         import gc
         gc.collect()
+
 # def build_and_train_model(
 #     rec_weight: float, alpha: float, lambda_: float
 # ) -> None:

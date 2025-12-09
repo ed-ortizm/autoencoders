@@ -1,5 +1,6 @@
 """Train a grid of autoencoders"""
 from configparser import ConfigParser, ExtendedInterpolation
+import gc
 import multiprocessing as mp
 from multiprocessing.sharedctypes import RawArray
 import os
@@ -40,14 +41,29 @@ if __name__ == "__main__":
     print("Load data")
     data_directory = parser.get("directory", "train")
     data_name = parser.get("file", "train")
-    data = np.load(f"{data_directory}/{data_name}", mmap_mode="r")
+    temp_data = np.load(f"{data_directory}/{data_name}")
 
-    input_dimensions = data.shape[1]
-    array_shape = data.shape
-    array_size = data.size
-    array_dtype = data.dtype
+    input_dimensions = temp_data.shape[1]
+    array_shape = temp_data.shape
+    array_size = temp_data.size
+    array_dtype = temp_data.dtype
 
-    del data
+    # #####################################################################
+    print("Create shared data")
+    counter = mp.Value("i", 0)
+
+    share_data = RawArray(
+        np.ctypeslib.as_ctypes_type(array_dtype), array_size
+    )
+    # Wrap it as numpy and COPY data into it
+    np_share_data = hyperSearch.to_numpy_array(share_data, array_shape)
+    np.copyto(np_share_data, temp_data)
+    # shuffle
+    np.random.shuffle(np_share_data)
+
+    del temp_data
+    del np_share_data
+    gc.collect()
     #####################################################################
     architecture = config_handler.section_to_dictionary(
         parser.items("architecture"), value_separators=["_"]
@@ -92,16 +108,13 @@ if __name__ == "__main__":
         lambdas[0] = 2
 
         grid["lambda"] = lambdas.tolist()
+    
     grid = hyperSearch.get_parameters_grid(grid)
-    # #####################################################################
-    counter = mp.Value("i", 0)
-
-    share_data = RawArray(np.ctypeslib.as_ctypes_type(array_dtype), array_size)
-
     # #####################################################################
     model_directory = parser.get("directory", "models")
     latent_dimensions = parser.getint("architecture", "latent_dimensions")
-    model_directory = f"{model_directory}/latent_{latent_dimensions:02d}"
+    bin_id = parser.getint("common", "bin")
+    model_directory = f"{model_directory}/bin/latent_{latent_dimensions:02d}"
     # #####################################################################
     number_processes = parser.getint("configuration", "number_processes")
     cores_per_worker = parser.getint("configuration", "cores_per_worker")
@@ -112,7 +125,7 @@ if __name__ == "__main__":
             counter,
             share_data,
             array_shape,
-            f"{data_directory}/{data_name}",
+            # f"{data_directory}/{data_name}",
             architecture,
             hyperparameters,
             model_directory,
