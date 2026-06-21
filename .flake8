@@ -1,0 +1,6 @@
+[flake8]
+max-line-length = 88
+extend-ignore = E203
+
+per-file-ignores =
+    *.ipynb: E305, E302, E402

@@ -1,6 +1,7 @@
 """
 Define class to set and reload autoencoders and variational AEs
 """
+
 import pickle
 from typing import Any, Tuple, Optional
 import numpy as np
@@ -8,6 +9,7 @@ import keras
 from keras import layers
 import tensorflow as tf
 from sdss.utils.managefiles import FileDirectory
+
 
 # pylint: disable=W0223
 class SamplingLayer(keras.layers.Layer):
@@ -37,10 +39,7 @@ class SamplingLayer(keras.layers.Layer):
 
     # pylint: disable=W0221
     def call(
-        self,
-        inputs: Tuple[tf.Tensor, tf.Tensor],
-        *args: Any,
-        **kwargs: Any
+        self, inputs: Tuple[tf.Tensor, tf.Tensor], *args: Any, **kwargs: Any
     ) -> tf.Tensor:
         """
         Perform the reparameterization trick.
@@ -94,6 +93,7 @@ class SamplingLayer(keras.layers.Layer):
         """
         return cls(**config)
 
+
 class MyCustomLoss(keras.losses.Loss):
     """
     Custom loss wrapper for scaling a built-in Keras loss function.
@@ -122,11 +122,7 @@ class MyCustomLoss(keras.losses.Loss):
         self.keras_loss = keras_loss
         self.weight_factor = weight_factor
 
-    def call(
-        self,
-        y_true: tf.Tensor,
-        y_pred: tf.Tensor
-    ) -> tf.Tensor:
+    def call(self, y_true: tf.Tensor, y_pred: tf.Tensor) -> tf.Tensor:
         """
         Apply the scaled loss function.
 
@@ -182,6 +178,7 @@ class MyCustomLoss(keras.losses.Loss):
         loss_instance = loss_class()
         return cls(keras_loss=loss_instance, **config)
 
+
 @keras.saving.register_keras_serializable()
 def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
     """
@@ -228,15 +225,17 @@ def compute_mmd(inputs: list[tf.Tensor]) -> tf.Tensor:
 
     return tf.ones_like(z[:, 0]) * mmd
 
+
 @keras.saving.register_keras_serializable()
 def create_true_samples(z: tf.Tensor) -> tf.Tensor:
     """
-    Generate samples from the prior (standard normal) 
+    Generate samples from the prior (standard normal)
     for MMD computation.
     """
     batch_size = tf.shape(z)[0]
     latent_dim = tf.shape(z)[1]
     return tf.random.normal([batch_size, latent_dim])
+
 
 @keras.saving.register_keras_serializable()
 def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
@@ -247,35 +246,46 @@ def compute_kld(inputs: list[tf.Tensor]) -> tf.Tensor:
         axis=1,
     )
 
+
 # Dummy replacements
 @keras.saving.register_keras_serializable()
 def dummy_kld(x):
     """Dummy KL divergence function for serialization."""
     return tf.zeros_like(x)
 
+
 @keras.saving.register_keras_serializable()
 def dummy_mmd(x):
     """Dummy MMD function for serialization."""
     return tf.zeros_like(x)
 
+
 @keras.saving.register_keras_serializable()
 def scale_kld_factory(alpha):
-    """ Registering a factory function for scaling KLD """
+    """Registering a factory function for scaling KLD"""
+
     def scale_kld(x):
         return x * (1 - alpha)
+
     return scale_kld
+
 
 @keras.saving.register_keras_serializable()
 def scale_mmd_factory(alpha, lambda_):
-    """ Registering a factory function for scaling MMD """
+    """Registering a factory function for scaling MMD"""
+
     def scale_mmd(x):
         return x * (alpha + lambda_ - 1)
+
     return scale_mmd
+
+
 # pylint: disable=W0613
 @keras.saving.register_keras_serializable()
 def passthrough_loss(y_true, y_pred):
-    """ pass through loss function """
+    """pass through loss function"""
     return tf.reduce_mean(y_pred)
+
 
 class AutoEncoder(FileDirectory):
     """
@@ -336,9 +346,7 @@ class AutoEncoder(FileDirectory):
 
         if reload:
             keras_model_path = f"{reload_from}/model.keras"
-            metadata_path = (
-                f"{reload_from}/architecture_hyperparms_train_history.pkl"
-            )
+            metadata_path = f"{reload_from}/architecture_hyperparms_train_history.pkl"
 
             self.model = keras.models.load_model(
                 keras_model_path,
@@ -348,10 +356,10 @@ class AutoEncoder(FileDirectory):
                     "scale_kld": dummy_kld,
                     "scale_mmd": dummy_mmd,
                     "scale_kld_factory": dummy_kld,
-                    "scale_mmd_factory": dummy_mmd
+                    "scale_mmd_factory": dummy_mmd,
                 },
                 compile=False,
-                safe_mode=False
+                safe_mode=False,
             )
 
             self.KLD = None
@@ -425,17 +433,18 @@ class AutoEncoder(FileDirectory):
             z, z_mean, z_log_var = self._sampling_layer(block_output)
 
             raw_kld = keras.layers.Lambda(
-                compute_kld, name="kld_loss",
-                output_shape=(None,)
+                compute_kld, name="kld_loss", output_shape=(None,)
             )([z_mean, z_log_var])
 
             true_samples_layer = keras.layers.Lambda(
-                create_true_samples, name="true_samples",
+                create_true_samples,
+                name="true_samples",
                 output_shape=(self.architecture["latent_dimensions"],),
             )(z)
 
             raw_mmd = keras.layers.Lambda(
-                compute_mmd, name="mmd_loss",
+                compute_mmd,
+                name="mmd_loss",
                 output_shape=(None,),  # broadcasted to match batch size
             )([true_samples_layer, z])
 
@@ -447,8 +456,7 @@ class AutoEncoder(FileDirectory):
             )(raw_kld)
 
             self.MMD = keras.layers.Lambda(
-                scale_mmd_factory(alpha, lambda_),
-                name="mmd", output_shape=(None,)
+                scale_mmd_factory(alpha, lambda_), name="mmd", output_shape=(None,)
             )(raw_mmd)
 
         else:
@@ -530,7 +538,7 @@ class AutoEncoder(FileDirectory):
         self.decoder = keras.Model(
             inputs=decoder_input,
             outputs=decoder_output,
-            name="reconstruction"  # Used for loss targeting during training
+            name="reconstruction",  # Used for loss targeting during training
             # name="decoder" # Alternative name if not targeting reconstruction
         )
 
@@ -549,7 +557,7 @@ class AutoEncoder(FileDirectory):
             The output tensor with the same dimensionality as the input
             spectra.
             The activation function is specified in the hyperparameters.
-        
+
         Notes
         -----
         The output layer typically uses a linear or sigmoid activation
@@ -567,9 +575,7 @@ class AutoEncoder(FileDirectory):
 
         return output_tensor
 
-    def _add_block(
-        self, input_tensor: tf.Tensor, block: str
-    ) -> tf.Tensor:
+    def _add_block(self, input_tensor: tf.Tensor, block: str) -> tf.Tensor:
         """
         Build a sequence of dense layers for the encoder or decoder.
 
@@ -728,11 +734,7 @@ class AutoEncoder(FileDirectory):
                 },
             )
         else:
-            self.model.compile(
-                optimizer=optimizer,
-                loss=MSE,
-                metrics=["mse"]
-            )
+            self.model.compile(optimizer=optimizer, loss=MSE, metrics=["mse"])
 
     def train(self, spectra: np.ndarray) -> keras.callbacks.History:
         """
@@ -785,7 +787,7 @@ class AutoEncoder(FileDirectory):
             y={
                 "reconstruction": spectra,
                 "kld": np.zeros((len(spectra), 1), dtype=np.float32),
-                "mmd": np.zeros((len(spectra), 1), dtype=np.float32)
+                "mmd": np.zeros((len(spectra), 1), dtype=np.float32),
             },
             batch_size=self.hyperparameters["batch_size"],
             epochs=self.hyperparameters["epochs"],
@@ -804,7 +806,7 @@ class AutoEncoder(FileDirectory):
         Reconstruct input spectra using the trained autoencoder.
 
         This method returns the output of the autoencoder after processing
-        the input spectra. It is typically used to compare the input and 
+        the input spectra. It is typically used to compare the input and
         reconstructed spectra during or after training.
 
         Parameters
@@ -821,9 +823,7 @@ class AutoEncoder(FileDirectory):
             spectra = spectra.reshape(1, -1)
         if isinstance(self.model.output, dict):
 
-            predicted_spectra = self.model.predict(
-                spectra, verbose=0
-            )["reconstruction"]
+            predicted_spectra = self.model.predict(spectra, verbose=0)["reconstruction"]
         else:
             predicted_spectra = self.model.predict(spectra, verbose=0)
 
@@ -879,8 +879,8 @@ class AutoEncoder(FileDirectory):
         """
         Save the trained autoencoder model and metadata to disk.
 
-        This method writes the trained Keras model to a `.keras` file and 
-        stores relevant training metadata (such as model architecture, 
+        This method writes the trained Keras model to a `.keras` file and
+        stores relevant training metadata (such as model architecture,
         hyperparameters, and training history) in a separate pickle file.
 
         Parameters
@@ -910,15 +910,10 @@ class AutoEncoder(FileDirectory):
         self.model.save(keras_model_path)
 
         parameters = [self.architecture, self.hyperparameters, self.history]
-        with open(
-            f"{save_to}/architecture_hyperparms_train_history.pkl",
-            "wb"
-        ) as file:
+        with open(f"{save_to}/architecture_hyperparms_train_history.pkl", "wb") as file:
             pickle.dump(parameters, file)
 
-    def _set_class_instances_from_saved_model(
-        self, metadata_path: str
-        ) -> list:
+    def _set_class_instances_from_saved_model(self, metadata_path: str) -> list:
         """
         Load encoder, decoder, and training metadata from saved model.
 
